@@ -3,17 +3,25 @@ package config
 import (
 	"errors"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Env             string
-	ServerPort      string
-	DatabaseURL     string
-	EnabledServices []string
-	LogLevel        string
+	Env                string
+	ServerPort         string
+	DatabaseURL        string
+	EnabledServices    []string
+	LogLevel           string
+	JWTSecret          string
+	JWTIssuer          string
+	JWTTTL             time.Duration
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
 }
 
 func Load() (*Config, error) {
@@ -27,12 +35,29 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL or POSTGRES_DSN is required")
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return nil, errors.New("JWT_SECRET is required")
+	}
+
+	jwtTTLMinutesRaw := getEnv("JWT_TTL_MINUTES", "60")
+	jwtTTLMinutes, err := strconv.Atoi(jwtTTLMinutesRaw)
+	if err != nil || jwtTTLMinutes <= 0 {
+		return nil, errors.New("JWT_TTL_MINUTES must be a positive integer")
+	}
+
 	cfg := &Config{
-		Env:             getEnv("APP_ENV", "development"),
-		ServerPort:      getEnv("PORT", "8080"),
-		DatabaseURL:     databaseURL,
-		EnabledServices: splitEnv("ENABLED_SERVICES"),
-		LogLevel:        getEnv("LOG_LEVEL", "info"),
+		Env:                getEnv("APP_ENV", "development"),
+		ServerPort:         getEnv("PORT", "8080"),
+		DatabaseURL:        databaseURL,
+		EnabledServices:    splitEnv("ENABLED_SERVICES"),
+		LogLevel:           getEnv("LOG_LEVEL", "info"),
+		JWTSecret:          jwtSecret,
+		JWTIssuer:          getEnv("JWT_ISSUER", "genzite"),
+		JWTTTL:             time.Duration(jwtTTLMinutes) * time.Minute,
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
 	}
 
 	return cfg, nil
