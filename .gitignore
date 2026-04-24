@@ -34,3 +34,4 @@ storage/
 # .idea/
 # .vscode/
 COPILOT.md
+/bin/
