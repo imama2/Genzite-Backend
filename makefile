@@ -2,61 +2,69 @@
 # Makefile for Portfolio Builder Backend
 # ============================================
 
-# Variables
-APP_NAME     = portfolio-server
-CMD_DIR      = ./cmd/server
-BUILD_DIR    = ./bin
-ENV_FILE     = .env
-DOCKER_COMPOSE = docker-compose
+APP_NAME     := genzite-backend
+CMD_DIR      := ./cmd/server
+BUILD_DIR    := ./bin
+GO           := go
+GOFLAGS      :=
+LDFLAGS      := -s -w
+DOCKER       := docker compose
+SERVER_URL   ?= http://localhost:8080
+# TOKEN must be provided via environment variable
 
-# Go related
-GO           = go
-GOFLAGS      = -v
-LDFLAGS      = -s -w
+ifeq ($(OS),Windows_NT)
+SHELL := cmd.exe
+.SHELLFLAGS := /C
+AIR := $(shell where air 2>NUL)
+BUILD_DIR_WIN := $(subst /,\\,$(BUILD_DIR))
+MKDIR := if not exist "$(BUILD_DIR_WIN)" mkdir "$(BUILD_DIR_WIN)"
+RMDIR := if exist "$(BUILD_DIR_WIN)" rmdir /S /Q "$(BUILD_DIR_WIN)"
+else
+AIR := $(shell command -v air 2>/dev/null)
+MKDIR := mkdir -p $(BUILD_DIR)
+RMDIR := rm -rf $(BUILD_DIR)
+endif
 
-# Colors (optional, for prettier output)
-GREEN  := \033[0;32m
-YELLOW := \033[0;33m
-NC     := \033[0m # No Color
+ifneq ($(strip $(AIR)),)
+RUN_CMD := air
+else
+RUN_CMD := $(GO) run $(GOFLAGS) $(CMD_DIR)
+endif
 
-# ============================================
-# Default target
-# ============================================
 .PHONY: help
 help: ## Show this help
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo "  run                 Run the server (air if available, otherwise go run)"
+	@echo "  build               Build the binary to ./bin/$(APP_NAME)"
+	@echo "  clean               Remove ./bin"
+	@echo "  test                Run all unit tests"
+	@echo "  test-coverage        Generate coverage.out and coverage.html"
+	@echo "  docker-up           Start docker compose stack"
+	@echo "  docker-down         Stop stack and remove volumes"
+	@echo "  docker-rebuild      Rebuild and restart app container only"
+	@echo "  docker-logs         Follow logs from app container"
+	@echo "  migrate-up          POST /api/v1/migrations/up (TOKEN required)"
+	@echo "  migrate-down        POST /api/v1/migrations/down (TOKEN required)"
+	@echo "  seed                POST /api/v1/migrations/seed-all (TOKEN required)"
+	@echo "  fmt                 Run go fmt ./..."
+	@echo "  tidy                Run go mod tidy"
+	@echo "  lint                Run golangci-lint"
 
-# ============================================
-# Development (local without Docker)
-# ============================================
 .PHONY: run
-run: ## Run the server with hot‑reload (requires air)
-	@if command -v air > /dev/null; then \
-		air; \
-	else \
-		echo "air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
-		echo "Falling back to go run..."; \
-		$(GO) run $(GOFLAGS) $(CMD_DIR); \
-	fi
+run: ## Run the server with air (fallback to go run)
+	$(RUN_CMD)
 
 .PHONY: build
-build: ## Build the binary locally (no Docker)
-	@echo "Building $(APP_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GO) build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(CMD_DIR)
-	@echo "Binary created at $(BUILD_DIR)/$(APP_NAME)"
+build: ## Build the binary
+	@$(MKDIR)
+	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(CMD_DIR)
 
 .PHONY: clean
 clean: ## Remove build artifacts
-	@rm -rf $(BUILD_DIR)
+	@$(RMDIR)
 
-# ============================================
-# Testing
-# ============================================
 .PHONY: test
 test: ## Run all unit tests
 	$(GO) test ./... -v -count=1
@@ -65,87 +73,49 @@ test: ## Run all unit tests
 test-coverage: ## Run tests with coverage report
 	$(GO) test ./... -coverprofile=coverage.out -covermode=atomic
 	$(GO) tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-# ============================================
-# Docker operations
-# ============================================
-.PHONY: docker-build
-docker-build: ## Build the Docker image
-	@echo "Building Docker image..."
-	docker build -t $(APP_NAME) .
 
 .PHONY: docker-up
 docker-up: ## Start the full stack (app + postgres + rabbitmq)
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER) up -d
 
 .PHONY: docker-down
-docker-down: ## Stop the stack and remove volumes (caution: data loss)
-	$(DOCKER_COMPOSE) down -v
-
-.PHONY: docker-logs
-docker-logs: ## Follow logs from the app container
-	$(DOCKER_COMPOSE) logs -f app
+docker-down: ## Stop the stack and remove volumes
+	$(DOCKER) down -v
 
 .PHONY: docker-rebuild
 docker-rebuild: ## Rebuild and restart the app container only
-	$(DOCKER_COMPOSE) up -d --build app
+	$(DOCKER) up -d --build app
 
-# ============================================
-# Database & Migrations via service endpoints
-# (requires the app to be running)
-# ============================================
+.PHONY: docker-logs
+docker-logs: ## Follow logs from the app container
+	$(DOCKER) logs -f app
+
 .PHONY: migrate-up
-migrate-up: ## Apply all pending migrations (needs admin token)
-	@echo "Triggering migrations... (ensure SERVER_URL and TOKEN are set)"
+migrate-up: ## Apply all pending migrations (TOKEN required)
 	curl -X POST $(SERVER_URL)/api/v1/migrations/up \
-	  -H "Authorization: Bearer $(TOKEN)" \
-	  -H "Content-Type: application/json"
+		-H "Authorization: Bearer $(TOKEN)" \
+		-H "Content-Type: application/json"
 
 .PHONY: migrate-down
-migrate-down: ## Rollback last migration batch (needs admin token)
-	@echo "Rolling back migrations..."
+migrate-down: ## Rollback migrations (TOKEN required)
 	curl -X POST $(SERVER_URL)/api/v1/migrations/down \
-	  -H "Authorization: Bearer $(TOKEN)" \
-	  -H "Content-Type: application/json"
+		-H "Authorization: Bearer $(TOKEN)" \
+		-H "Content-Type: application/json"
 
 .PHONY: seed
-seed: ## Run all seeders (needs admin token)
-	@echo "Running seeders..."
+seed: ## Run all seeders (TOKEN required)
 	curl -X POST $(SERVER_URL)/api/v1/migrations/seed-all \
-	  -H "Authorization: Bearer $(TOKEN)" \
-	  -H "Content-Type: application/json"
-
-# ============================================
-# Utility
-# ============================================
-.PHONY: lint
-lint: ## Lint the code (golangci-lint must be installed)
-	golangci-lint run ./...
+		-H "Authorization: Bearer $(TOKEN)" \
+		-H "Content-Type: application/json"
 
 .PHONY: fmt
-fmt: ## Format the code
+fmt: ## Format code
 	$(GO) fmt ./...
 
 .PHONY: tidy
 tidy: ## Tidy go modules
 	$(GO) mod tidy
 
-# ============================================
-# Dev environment helpers
-# ============================================
-.PHONY: dev-setup
-dev-setup: ## Install required Go tools (air, golangci-lint, goose)
-	go install github.com/cosmtrek/air@latest
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	go install github.com/pressly/goose/v3/cmd/goose@latest
-
-# ============================================
-# Full workflow shortcuts
-# ============================================
-.PHONY: fresh-start
-fresh-start: ## Pull images, rebuild app, apply migrations, seed
-	$(DOCKER_COMPOSE) down -v
-	$(DOCKER_COMPOSE) up -d --build
-	@sleep 5   # wait for DB/rabbitmq readiness
-	@echo "Run migrations now with: make migrate-up SERVER_URL=http://localhost:8080 TOKEN=<your_admin_token>"
+.PHONY: lint
+lint: ## Lint with golangci-lint
+	golangci-lint run ./...
