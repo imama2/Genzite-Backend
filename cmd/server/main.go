@@ -16,6 +16,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/migrations"
 	"github.com/imama2/Genzite-Backend/internal/notification"
 	"github.com/imama2/Genzite-Backend/internal/payment"
+	"github.com/imama2/Genzite-Backend/internal/template"
 	"github.com/imama2/Genzite-Backend/internal/webbuilder"
 )
 
@@ -45,6 +46,7 @@ func main() {
 	chatbotModule := chatbot.NewModule(logger)
 	paymentModule := payment.NewModule(logger)
 	notificationModule := notification.NewModule(logger)
+	templateModule := template.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
 		migrationsModule,
@@ -52,20 +54,21 @@ func main() {
 		chatbotModule,
 		paymentModule,
 		notificationModule,
+		templateModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
 	for _, name := range cfg.EnabledServices {
 		enabled[name] = struct{}{}
 	}
-	enableAll := len(enabled) == 0
 
-	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
-	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
-	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
-	chatbotEnabled := enableAll || hasService(enabled, chatbotModule.Name())
-	paymentEnabled := enableAll || hasService(enabled, paymentModule.Name())
-	notificationEnabled := enableAll || hasService(enabled, notificationModule.Name())
+	iamEnabled := hasService(enabled, iamModule.Name())
+	migrationsEnabled := hasService(enabled, migrationsModule.Name())
+	webBuilderEnabled := hasService(enabled, webBuilderModule.Name())
+	chatbotEnabled := hasService(enabled, chatbotModule.Name())
+	paymentEnabled := hasService(enabled, paymentModule.Name())
+	notificationEnabled := hasService(enabled, notificationModule.Name())
+	templateEnabled := hasService(enabled, templateModule.Name())
 
 	var brokerClient *broker.Client
 	if notificationEnabled {
@@ -78,11 +81,8 @@ func main() {
 	}
 
 	for _, mod := range modules {
-		if !enableAll {
-			if _, ok := enabled[mod.Name()]; !ok {
-				logger.Info("service disabled", "service", mod.Name())
-				continue
-			}
+		if _, ok := enabled[mod.Name()]; !ok {
+			continue
 		}
 
 		if err := mod.Init(cfg, database, brokerClient); err != nil {
@@ -137,6 +137,14 @@ func main() {
 			os.Exit(1)
 		}
 		paymentModule.RegisterRoutes(application.Router.Group(""), authMiddleware)
+	}
+
+	if templateEnabled {
+		if !iamEnabled {
+			logger.Error("template requires iam service")
+			os.Exit(1)
+		}
+		templateModule.RegisterRoutes(api, authMiddleware)
 	}
 
 	addr := ":" + cfg.ServerPort
