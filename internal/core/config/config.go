@@ -31,6 +31,8 @@ type Config struct {
 	OpenAIAPIKey       string
 	OpenAIModel        string
 	OpenAIBaseURL      string
+	MidtransServerKey  string
+	MidtransBaseURL    string
 }
 
 func Load() (*Config, error) {
@@ -76,6 +78,8 @@ func Load() (*Config, error) {
 		OpenAIAPIKey:       getEnv("OPENAI_API_KEY", ""),
 		OpenAIModel:        getEnv("OPENAI_MODEL", "gpt-4o-mini"),
 		OpenAIBaseURL:      getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
+		MidtransBaseURL:    getEnv("MIDTRANS_BASE_URL", "https://app.sandbox.midtrans.com"),
 	}
 
 	return cfg, nil

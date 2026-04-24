@@ -13,6 +13,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/iam"
 	"github.com/imama2/Genzite-Backend/internal/migrations"
+	"github.com/imama2/Genzite-Backend/internal/payment"
 	"github.com/imama2/Genzite-Backend/internal/webbuilder"
 )
 
@@ -40,11 +41,13 @@ func main() {
 	migrationsModule := migrations.NewModule(logger)
 	webBuilderModule := webbuilder.NewModule(logger)
 	chatbotModule := chatbot.NewModule(logger)
+	paymentModule := payment.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
 		migrationsModule,
 		webBuilderModule,
 		chatbotModule,
+		paymentModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
@@ -73,6 +76,7 @@ func main() {
 	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
 	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
 	chatbotEnabled := enableAll || hasService(enabled, chatbotModule.Name())
+	paymentEnabled := enableAll || hasService(enabled, paymentModule.Name())
 
 	var authMiddleware gin.HandlerFunc
 	if iamEnabled {
@@ -106,6 +110,18 @@ func main() {
 			os.Exit(1)
 		}
 		chatbotModule.RegisterRoutes(api, authMiddleware)
+	}
+
+	if paymentEnabled {
+		if !iamEnabled || !webBuilderEnabled {
+			logger.Error("payment requires iam and web-builder services")
+			os.Exit(1)
+		}
+		if err := paymentModule.SetWebBuilder(webBuilderModule.Manager()); err != nil {
+			logger.Error("failed to link web-builder to payment", "error", err)
+			os.Exit(1)
+		}
+		paymentModule.RegisterRoutes(application.Router.Group(""), authMiddleware)
 	}
 
 	addr := ":" + cfg.ServerPort

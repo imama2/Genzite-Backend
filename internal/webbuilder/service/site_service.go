@@ -35,6 +35,7 @@ var (
 type SiteManager interface {
 	CreateSite(ctx context.Context, userID uint, input CreateSiteInput) (*models.Site, error)
 	PublishSite(ctx context.Context, userID uint, siteID uint) (*models.Site, error)
+	GetSiteForUser(ctx context.Context, userID uint, siteID uint) (*models.Site, error)
 }
 
 type SiteService struct {
@@ -169,6 +170,22 @@ func (s *SiteService) PublishSite(ctx context.Context, userID uint, siteID uint)
 
 	if err := s.repo.UpdateSite(ctx, site); err != nil {
 		return nil, err
+	}
+
+	return site, nil
+}
+
+func (s *SiteService) GetSiteForUser(ctx context.Context, userID uint, siteID uint) (*models.Site, error) {
+	site, err := s.repo.GetSiteByID(ctx, siteID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrSiteNotFound
+		}
+		return nil, err
+	}
+
+	if site.UserID != userID {
+		return nil, ErrUnauthorized
 	}
 
 	return site, nil
