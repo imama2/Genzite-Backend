@@ -12,6 +12,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/module"
 	"github.com/imama2/Genzite-Backend/internal/iam"
 	"github.com/imama2/Genzite-Backend/internal/migrations"
+	"github.com/imama2/Genzite-Backend/internal/webbuilder"
 )
 
 func main() {
@@ -36,9 +37,11 @@ func main() {
 
 	iamModule := iam.NewModule(logger)
 	migrationsModule := migrations.NewModule(logger)
+	webBuilderModule := webbuilder.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
 		migrationsModule,
+		webBuilderModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
@@ -65,6 +68,7 @@ func main() {
 
 	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
 	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
+	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
 
 	var authMiddleware gin.HandlerFunc
 	if iamEnabled {
@@ -78,6 +82,14 @@ func main() {
 			os.Exit(1)
 		}
 		migrationsModule.RegisterRoutes(api, authMiddleware)
+	}
+
+	if webBuilderEnabled {
+		if !iamEnabled {
+			logger.Error("web-builder requires iam service")
+			os.Exit(1)
+		}
+		webBuilderModule.RegisterRoutes(application.Router.Group(""), authMiddleware)
 	}
 
 	addr := ":" + cfg.ServerPort

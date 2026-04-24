@@ -26,6 +26,8 @@ type Config struct {
 	AdminEmail         string
 	AdminPassword      string
 	AdminName          string
+	ServeMode          string
+	WebBuilderPath     string
 }
 
 func Load() (*Config, error) {
@@ -66,6 +68,8 @@ func Load() (*Config, error) {
 		AdminEmail:         getEnv("ADMIN_EMAIL", ""),
 		AdminPassword:      getEnv("ADMIN_PASSWORD", ""),
 		AdminName:          getEnv("ADMIN_NAME", "Administrator"),
+		ServeMode:          getEnv("SERVE_MODE", "manual"),
+		WebBuilderPath:     getEnv("WEB_BUILDER_STORAGE_PATH", getEnv("PORTFOLIO_STORAGE_PATH", "storage/web-builder")),
 	}
 
 	return cfg, nil
