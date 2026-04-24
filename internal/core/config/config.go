@@ -28,6 +28,9 @@ type Config struct {
 	AdminName          string
 	ServeMode          string
 	WebBuilderPath     string
+	OpenAIAPIKey       string
+	OpenAIModel        string
+	OpenAIBaseURL      string
 }
 
 func Load() (*Config, error) {
@@ -70,6 +73,9 @@ func Load() (*Config, error) {
 		AdminName:          getEnv("ADMIN_NAME", "Administrator"),
 		ServeMode:          getEnv("SERVE_MODE", "manual"),
 		WebBuilderPath:     getEnv("WEB_BUILDER_STORAGE_PATH", getEnv("PORTFOLIO_STORAGE_PATH", "storage/web-builder")),
+		OpenAIAPIKey:       getEnv("OPENAI_API_KEY", ""),
+		OpenAIModel:        getEnv("OPENAI_MODEL", "gpt-4o-mini"),
+		OpenAIBaseURL:      getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 	}
 
 	return cfg, nil

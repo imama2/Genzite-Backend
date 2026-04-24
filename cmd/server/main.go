@@ -10,6 +10,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/logging"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/core/module"
+	"github.com/imama2/Genzite-Backend/internal/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/iam"
 	"github.com/imama2/Genzite-Backend/internal/migrations"
 	"github.com/imama2/Genzite-Backend/internal/webbuilder"
@@ -38,10 +39,12 @@ func main() {
 	iamModule := iam.NewModule(logger)
 	migrationsModule := migrations.NewModule(logger)
 	webBuilderModule := webbuilder.NewModule(logger)
+	chatbotModule := chatbot.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
 		migrationsModule,
 		webBuilderModule,
+		chatbotModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
@@ -69,6 +72,7 @@ func main() {
 	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
 	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
 	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
+	chatbotEnabled := enableAll || hasService(enabled, chatbotModule.Name())
 
 	var authMiddleware gin.HandlerFunc
 	if iamEnabled {
@@ -90,6 +94,18 @@ func main() {
 			os.Exit(1)
 		}
 		webBuilderModule.RegisterRoutes(application.Router.Group(""), authMiddleware)
+	}
+
+	if chatbotEnabled {
+		if !iamEnabled || !webBuilderEnabled {
+			logger.Error("chatbot requires iam and web-builder services")
+			os.Exit(1)
+		}
+		if err := chatbotModule.SetWebBuilder(webBuilderModule.Manager()); err != nil {
+			logger.Error("failed to link web-builder to chatbot", "error", err)
+			os.Exit(1)
+		}
+		chatbotModule.RegisterRoutes(api, authMiddleware)
 	}
 
 	addr := ":" + cfg.ServerPort
