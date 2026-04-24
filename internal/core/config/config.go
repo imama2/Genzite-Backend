@@ -22,6 +22,10 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
+	MigrationsPath     string
+	AdminEmail         string
+	AdminPassword      string
+	AdminName          string
 }
 
 func Load() (*Config, error) {
@@ -58,6 +62,10 @@ func Load() (*Config, error) {
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
+		MigrationsPath:     getEnv("MIGRATIONS_PATH", "migrations"),
+		AdminEmail:         getEnv("ADMIN_EMAIL", ""),
+		AdminPassword:      getEnv("ADMIN_PASSWORD", ""),
+		AdminName:          getEnv("ADMIN_NAME", "Administrator"),
 	}
 
 	return cfg, nil

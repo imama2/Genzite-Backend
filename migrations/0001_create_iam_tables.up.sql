@@ -5,7 +5,8 @@ CREATE TABLE users (
     password_hash TEXT,
     google_id TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE roles (
@@ -13,7 +14,8 @@ CREATE TABLE roles (
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE permissions (
@@ -21,7 +23,8 @@ CREATE TABLE permissions (
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE user_roles (
@@ -35,3 +38,7 @@ CREATE TABLE role_permissions (
     permission_id BIGINT NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
     PRIMARY KEY (role_id, permission_id)
 );
+
+CREATE INDEX idx_users_deleted_at ON users (deleted_at);
+CREATE INDEX idx_roles_deleted_at ON roles (deleted_at);
+CREATE INDEX idx_permissions_deleted_at ON permissions (deleted_at);

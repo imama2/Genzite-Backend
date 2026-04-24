@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/app"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/db"
@@ -10,6 +11,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/core/module"
 	"github.com/imama2/Genzite-Backend/internal/iam"
+	"github.com/imama2/Genzite-Backend/internal/migrations"
 )
 
 func main() {
@@ -33,8 +35,10 @@ func main() {
 	application.RegisterHealth()
 
 	iamModule := iam.NewModule(logger)
+	migrationsModule := migrations.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
+		migrationsModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
@@ -58,9 +62,22 @@ func main() {
 	}
 
 	api := application.Router.Group("/api/v1")
-	if enableAll || hasService(enabled, iamModule.Name()) {
-		apiMiddleware := middleware.JWTAuth(cfg, iamModule.AuthProvider())
-		iamModule.RegisterRoutes(api, apiMiddleware)
+
+	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
+	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
+
+	var authMiddleware gin.HandlerFunc
+	if iamEnabled {
+		authMiddleware = middleware.JWTAuth(cfg, iamModule.AuthProvider())
+		iamModule.RegisterRoutes(api, authMiddleware)
+	}
+
+	if migrationsEnabled {
+		if !iamEnabled {
+			logger.Error("migrations requires iam service")
+			os.Exit(1)
+		}
+		migrationsModule.RegisterRoutes(api, authMiddleware)
 	}
 
 	addr := ":" + cfg.ServerPort
