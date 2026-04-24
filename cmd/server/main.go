@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/app"
+	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/db"
 	"github.com/imama2/Genzite-Backend/internal/core/logging"
@@ -13,6 +14,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/iam"
 	"github.com/imama2/Genzite-Backend/internal/migrations"
+	"github.com/imama2/Genzite-Backend/internal/notification"
 	"github.com/imama2/Genzite-Backend/internal/payment"
 	"github.com/imama2/Genzite-Backend/internal/webbuilder"
 )
@@ -42,12 +44,14 @@ func main() {
 	webBuilderModule := webbuilder.NewModule(logger)
 	chatbotModule := chatbot.NewModule(logger)
 	paymentModule := payment.NewModule(logger)
+	notificationModule := notification.NewModule(logger)
 	modules := []module.Module{
 		iamModule,
 		migrationsModule,
 		webBuilderModule,
 		chatbotModule,
 		paymentModule,
+		notificationModule,
 	}
 
 	enabled := make(map[string]struct{}, len(cfg.EnabledServices))
@@ -55,6 +59,23 @@ func main() {
 		enabled[name] = struct{}{}
 	}
 	enableAll := len(enabled) == 0
+
+	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
+	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
+	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
+	chatbotEnabled := enableAll || hasService(enabled, chatbotModule.Name())
+	paymentEnabled := enableAll || hasService(enabled, paymentModule.Name())
+	notificationEnabled := enableAll || hasService(enabled, notificationModule.Name())
+
+	var brokerClient *broker.Client
+	if notificationEnabled {
+		client, err := broker.NewClient(cfg, logger)
+		if err != nil {
+			logger.Error("failed to connect broker", "error", err)
+			os.Exit(1)
+		}
+		brokerClient = client
+	}
 
 	for _, mod := range modules {
 		if !enableAll {
@@ -64,19 +85,13 @@ func main() {
 			}
 		}
 
-		if err := mod.Init(cfg, database, nil); err != nil {
+		if err := mod.Init(cfg, database, brokerClient); err != nil {
 			logger.Error("failed to init module", "module", mod.Name(), "error", err)
 			os.Exit(1)
 		}
 	}
 
 	api := application.Router.Group("/api/v1")
-
-	iamEnabled := enableAll || hasService(enabled, iamModule.Name())
-	migrationsEnabled := enableAll || hasService(enabled, migrationsModule.Name())
-	webBuilderEnabled := enableAll || hasService(enabled, webBuilderModule.Name())
-	chatbotEnabled := enableAll || hasService(enabled, chatbotModule.Name())
-	paymentEnabled := enableAll || hasService(enabled, paymentModule.Name())
 
 	var authMiddleware gin.HandlerFunc
 	if iamEnabled {

@@ -7,6 +7,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/joho/godotenv v1.5.1
+	github.com/rabbitmq/amqp091-go v1.10.0
 	golang.org/x/crypto v0.23.0
 	golang.org/x/oauth2 v0.22.0
 	gorm.io/driver/postgres v1.5.6

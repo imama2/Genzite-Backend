@@ -33,6 +33,14 @@ type Config struct {
 	OpenAIBaseURL      string
 	MidtransServerKey  string
 	MidtransBaseURL    string
+	RabbitMQURL        string
+	RabbitMQQueue      string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPassword       string
+	SMTPFrom           string
+	SMTPFromName       string
 }
 
 func Load() (*Config, error) {
@@ -80,6 +88,14 @@ func Load() (*Config, error) {
 		OpenAIBaseURL:      getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 		MidtransServerKey:  getEnv("MIDTRANS_SERVER_KEY", ""),
 		MidtransBaseURL:    getEnv("MIDTRANS_BASE_URL", "https://app.sandbox.midtrans.com"),
+		RabbitMQURL:        getEnv("RABBITMQ_URL", ""),
+		RabbitMQQueue:      getEnv("RABBITMQ_QUEUE", "notifications.email"),
+		SMTPHost:           getEnv("SMTP_HOST", ""),
+		SMTPPort:           getEnv("SMTP_PORT", "587"),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPassword:       getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:           getEnv("SMTP_FROM", ""),
+		SMTPFromName:       getEnv("SMTP_FROM_NAME", ""),
 	}
 
 	return cfg, nil
