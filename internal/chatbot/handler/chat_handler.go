@@ -19,20 +19,20 @@ func New(service *service.ChatService) *ChatHandler {
 }
 
 type chatRequest struct {
-	Slug      string              `json:"slug" binding:"required"`
-	Prompt    string              `json:"prompt" binding:"required"`
-	Name      string              `json:"name"`
-	Headline  string              `json:"headline"`
-	Bio       string              `json:"bio"`
-	AvatarURL string              `json:"avatar_url"`
-	Links     []webbuilder.Link   `json:"links"`
+	Slug      string            `json:"slug" binding:"required"`
+	Prompt    string            `json:"prompt" binding:"required"`
+	Name      string            `json:"name"`
+	Headline  string            `json:"headline"`
+	Bio       string            `json:"bio"`
+	AvatarURL string            `json:"avatar_url"`
+	Links     []webbuilder.Link `json:"links"`
 }
 
 type chatResponse struct {
-	SiteID uint                   `json:"site_id"`
-	Slug   string                 `json:"slug"`
-	Status string                 `json:"status"`
-	Config webbuilder.SiteConfig  `json:"config"`
+	SiteID uint                  `json:"site_id"`
+	Slug   string                `json:"slug"`
+	Status string                `json:"status"`
+	Config webbuilder.SiteConfig `json:"config"`
 }
 
 func (h *ChatHandler) GenerateDraft(c *gin.Context) {

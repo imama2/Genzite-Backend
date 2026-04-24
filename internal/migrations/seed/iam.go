@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	adminRoleName          = "admin"
-	migrationsPermission   = "migrations:*"
-	adminRoleDescription   = "System administrator"
-	migrationsPermDesc     = "Run migrations and seeders"
-	defaultAdminName       = "Administrator"
+	adminRoleName        = "admin"
+	migrationsPermission = "migrations:*"
+	adminRoleDescription = "System administrator"
+	migrationsPermDesc   = "Run migrations and seeders"
+	defaultAdminName     = "Administrator"
 )
 
 func IAM(ctx context.Context, db *gorm.DB, cfg *config.Config, logger *slog.Logger) error {

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/imama2/Genzite-Backend/internal/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/core/app"
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
@@ -11,7 +12,6 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/logging"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/core/module"
-	"github.com/imama2/Genzite-Backend/internal/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/iam"
 	"github.com/imama2/Genzite-Backend/internal/migrations"
 	"github.com/imama2/Genzite-Backend/internal/notification"

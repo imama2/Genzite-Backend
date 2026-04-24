@@ -8,8 +8,8 @@ import (
 
 type Site struct {
 	gorm.Model
-	UserID      uint       `gorm:"column:user_id;index;not null"`
-	Slug        string     `gorm:"column:slug;uniqueIndex;not null"`
+	UserID      uint   `gorm:"column:user_id;index;not null"`
+	Slug        string `gorm:"column:slug;uniqueIndex;not null"`
 	Title       string
 	ConfigJSON  string     `gorm:"column:config;type:jsonb;not null"`
 	Status      string     `gorm:"column:status;not null"`

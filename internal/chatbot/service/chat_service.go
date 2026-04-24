@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	ErrInvalidInput        = errors.New("invalid input")
-	ErrAIUnavailable       = errors.New("ai client not configured")
-	ErrWebBuilderMissing   = errors.New("web-builder service not configured")
+	ErrInvalidInput      = errors.New("invalid input")
+	ErrAIUnavailable     = errors.New("ai client not configured")
+	ErrWebBuilderMissing = errors.New("web-builder service not configured")
 )
 
 type ChatService struct {

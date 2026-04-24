@@ -40,8 +40,8 @@ func New(cfg *config.Config) (*Client, error) {
 
 type TransactionRequest struct {
 	TransactionDetails TransactionDetails `json:"transaction_details"`
-	ItemDetails        []ItemDetail        `json:"item_details,omitempty"`
-	CustomerDetails    *CustomerDetails    `json:"customer_details,omitempty"`
+	ItemDetails        []ItemDetail       `json:"item_details,omitempty"`
+	CustomerDetails    *CustomerDetails   `json:"customer_details,omitempty"`
 }
 
 type TransactionDetails struct {
