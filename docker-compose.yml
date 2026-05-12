@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: genzite-backend:local
+    container_name: genzite-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://postgres:postgres@db:5432/genzite?sslmode=disable"
+      JWT_SECRET: "change-me"
+      ENABLED_SERVICES: "iam,migrations,web-builder,chatbot,payment,notification,template"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_QUEUE: "notifications.email"
+      MIGRATIONS_PATH: "migrations"
+      WEB_BUILDER_STORAGE_PATH: "storage/web-builder"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - web-builder-storage:/app/storage/web-builder
+
+  db:
+    image: postgres:16-alpine
+    container_name: genzite-postgres
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "genzite"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d genzite"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: genzite-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  web-builder-storage:
