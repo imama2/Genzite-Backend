@@ -14,6 +14,8 @@ type Config struct {
 	Env                string
 	ServerPort         string
 	DatabaseURL        string
+	DatabaseUsername   string
+	DatabasePassword   string
 	EnabledServices    []string
 	LogLevel           string
 	JWTSecret          string
@@ -54,6 +56,16 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL or POSTGRES_DSN is required")
 	}
 
+	databaseUsername := os.Getenv("DATABASE_USERNAME")
+	if databaseUsername == "" {
+		return nil, errors.New("DATABASE_USERNAME is required")
+	}
+
+	databasePassword := os.Getenv("DATABASE_PASSWORD")
+	if databasePassword == "" {
+		return nil, errors.New("DATABASE_PASSWORD is required")
+	}
+
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return nil, errors.New("JWT_SECRET is required")
@@ -69,6 +81,8 @@ func Load() (*Config, error) {
 		Env:                getEnv("APP_ENV", "development"),
 		ServerPort:         getEnv("PORT", "8080"),
 		DatabaseURL:        databaseURL,
+		DatabaseUsername:   databaseUsername,
+		DatabasePassword:   databasePassword,
 		EnabledServices:    splitEnv("ENABLED_SERVICES"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 		JWTSecret:          jwtSecret,
