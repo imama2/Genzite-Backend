@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imama2/Genzite-Backend/internal/chatbot"
+	"github.com/imama2/Genzite-Backend/internal/services/chatbot"
 	"github.com/imama2/Genzite-Backend/internal/core/app"
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
@@ -12,12 +12,12 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/logging"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/core/module"
-	"github.com/imama2/Genzite-Backend/internal/iam"
-	"github.com/imama2/Genzite-Backend/internal/migrations"
-	"github.com/imama2/Genzite-Backend/internal/notification"
-	"github.com/imama2/Genzite-Backend/internal/payment"
-	"github.com/imama2/Genzite-Backend/internal/template"
-	"github.com/imama2/Genzite-Backend/internal/webbuilder"
+	"github.com/imama2/Genzite-Backend/internal/services/iam"
+	"github.com/imama2/Genzite-Backend/internal/services/migrations"
+	"github.com/imama2/Genzite-Backend/internal/services/notification"
+	"github.com/imama2/Genzite-Backend/internal/services/payment"
+	"github.com/imama2/Genzite-Backend/internal/services/template"
+	"github.com/imama2/Genzite-Backend/internal/services/webbuilder"
 )
 
 func main() {
@@ -159,3 +159,5 @@ func hasService(enabled map[string]struct{}, name string) bool {
 	_, ok := enabled[name]
 	return ok
 }
+
+
