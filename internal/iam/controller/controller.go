@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"errors"
@@ -7,45 +7,25 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
+	"github.com/imama2/Genzite-Backend/internal/iam/entity"
 	"github.com/imama2/Genzite-Backend/internal/iam/service"
+	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
 
-type AuthHandler struct {
+type AuthController struct {
 	cfg     *config.Config
 	service *service.AuthService
 }
 
-func NewAuthHandler(cfg *config.Config, service *service.AuthService) *AuthHandler {
-	return &AuthHandler{
+func NewAuthController(cfg *config.Config, service *service.AuthService) *AuthController {
+	return &AuthController{
 		cfg:     cfg,
 		service: service,
 	}
 }
 
-type registerRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
-	Name     string `json:"name"`
-}
-
-type loginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type authResponse struct {
-	Token string      `json:"token"`
-	User  userPayload `json:"user"`
-}
-
-type userPayload struct {
-	ID    uint   `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-}
-
-func (h *AuthHandler) Register(c *gin.Context) {
-	var req registerRequest
+func (h *AuthController) Register(c *gin.Context) {
+	var req entity.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
@@ -68,14 +48,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, authResponse{
+	responses.Ok(c, "user registered successfully", entity.AuthResponse{
 		Token: token,
-		User:  userPayload{ID: user.ID, Email: user.Email, Name: user.Name},
+		User:  entity.UserPayloadResponse{ID: user.ID, Email: user.Email, Name: user.Name},
 	})
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var req loginRequest
+func (h *AuthController) Login(c *gin.Context) {
+	var req entity.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
@@ -95,13 +75,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, authResponse{
+	responses.Ok(c, "login successful", entity.AuthResponse{
 		Token: token,
-		User:  userPayload{ID: user.ID, Email: user.Email, Name: user.Name},
+		User:  entity.UserPayloadResponse{ID: user.ID, Email: user.Email, Name: user.Name},
 	})
 }
 
-func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+func (h *AuthController) GoogleLogin(c *gin.Context) {
 	state := generateState()
 	authURL, err := h.service.GoogleAuthURL(state)
 	if err != nil {
@@ -114,7 +94,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
-func (h *AuthHandler) GoogleCallback(c *gin.Context) {
+func (h *AuthController) GoogleCallback(c *gin.Context) {
 	state := c.Query("state")
 	code := c.Query("code")
 	if state == "" || code == "" {
@@ -140,13 +120,13 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 	}
 
 	c.SetCookie("oauth_state", "", -1, "/", "", h.cfg.Env == "production", true)
-	c.JSON(http.StatusOK, authResponse{
+	responses.Ok(c, "google login successful", entity.AuthResponse{
 		Token: token,
-		User:  userPayload{ID: user.ID, Email: user.Email, Name: user.Name},
+		User:  entity.UserPayloadResponse{ID: user.ID, Email: user.Email, Name: user.Name},
 	})
 }
 
-func (h *AuthHandler) Me(c *gin.Context) {
+func (h *AuthController) Me(c *gin.Context) {
 	userIDRaw, ok := c.Get(middleware.ContextUserIDKey)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -165,7 +145,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, userPayload{ID: user.ID, Email: user.Email, Name: user.Name})
+	responses.Ok(c, "profile loaded successfully", entity.UserPayloadResponse{ID: user.ID, Email: user.Email, Name: user.Name})
 }
 
 func generateState() string {
