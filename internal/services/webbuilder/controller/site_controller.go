@@ -1,8 +1,7 @@
-package handler
+package controller
 
 import (
 	"errors"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,14 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
 
-type SiteHandler struct {
+type SiteController struct {
 	service *service.SiteService
 }
 
-func New(service *service.SiteService) *SiteHandler {
-	return &SiteHandler{service: service}
+func New(service *service.SiteService) *SiteController {
+	return &SiteController{service: service}
 }
 
 type createSiteRequest struct {
@@ -33,16 +33,16 @@ type siteResponse struct {
 	PublishedAt string `json:"published_at,omitempty"`
 }
 
-func (h *SiteHandler) CreateSite(c *gin.Context) {
+func (h *SiteController) CreateSite(c *gin.Context) {
 	userID, ok := getUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		responses.Unauthorized(c, "unauthorized")
 		return
 	}
 
 	var req createSiteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		responses.BadRequest(c, "invalid request")
 		return
 	}
 
@@ -53,32 +53,32 @@ func (h *SiteHandler) CreateSite(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrSlugTaken):
-			c.JSON(http.StatusConflict, gin.H{"error": "slug already taken"})
+			responses.ConflictResponse(c, "slug already taken")
 		case errors.Is(err, service.ErrInvalidInput):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+			responses.BadRequest(c, "invalid input")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create site"})
+			responses.ServerError(c, "failed to create site")
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, siteResponse{
+	responses.CreatedResponse(c, "site created", siteResponse{
 		ID:     site.ID,
 		Slug:   site.Slug,
 		Status: site.Status,
 	})
 }
 
-func (h *SiteHandler) PublishSite(c *gin.Context) {
+func (h *SiteController) PublishSite(c *gin.Context) {
 	userID, ok := getUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		responses.Unauthorized(c, "unauthorized")
 		return
 	}
 
 	siteID, err := parseUintParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid site id"})
+		responses.BadRequest(c, "invalid site id")
 		return
 	}
 
@@ -86,11 +86,11 @@ func (h *SiteHandler) PublishSite(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrUnauthorized):
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			responses.ForbiddenResponse(c, "forbidden")
 		case errors.Is(err, service.ErrSiteNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": "site not found"})
+			responses.NotFound(c, "site not found")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to publish site"})
+			responses.ServerError(c, "failed to publish site")
 		}
 		return
 	}
@@ -100,7 +100,7 @@ func (h *SiteHandler) PublishSite(c *gin.Context) {
 		publishedAt = site.PublishedAt.UTC().Format(time.RFC3339)
 	}
 
-	c.JSON(http.StatusOK, siteResponse{
+	responses.Ok(c, "site published", siteResponse{
 		ID:          site.ID,
 		Slug:        site.Slug,
 		Status:      site.Status,
@@ -108,22 +108,22 @@ func (h *SiteHandler) PublishSite(c *gin.Context) {
 	})
 }
 
-func (h *SiteHandler) ServeSite(c *gin.Context) {
+func (h *SiteController) ServeSite(c *gin.Context) {
 	slug := c.Param("slug")
 	if slug == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		responses.NotFound(c, "not found")
 		return
 	}
 
 	site, err := h.service.GetPublishedSiteBySlug(c.Request.Context(), slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		responses.NotFound(c, "not found")
 		return
 	}
 
 	path := filepath.Clean(site.OutputPath)
 	if _, err := os.Stat(path); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		responses.NotFound(c, "not found")
 		return
 	}
 
@@ -150,4 +150,3 @@ func parseUintParam(c *gin.Context, name string) (uint, error) {
 	}
 	return uint(parsed), nil
 }
-

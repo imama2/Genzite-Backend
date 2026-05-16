@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
-	"github.com/imama2/Genzite-Backend/internal/services/payment/handler"
+	"github.com/imama2/Genzite-Backend/internal/services/payment/controller"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/midtrans"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/repository"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/service"
@@ -20,7 +20,7 @@ type Module struct {
 	repo       repository.Repository
 	client     *midtrans.Client
 	service    *service.PaymentService
-	handler    *handler.PaymentHandler
+	controller *controller.PaymentController
 	webBuilder webbuilder.SiteManager
 }
 
@@ -49,15 +49,13 @@ func (m *Module) SetWebBuilder(manager webbuilder.SiteManager) error {
 	}
 	m.webBuilder = manager
 	m.service = service.New(m.cfg, m.repo, m.client, manager, m.logger)
-	m.handler = handler.New(m.service)
+	m.controller = controller.New(m.service)
 	return nil
 }
 
 func (m *Module) RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.HandlerFunc) {
 	protected := router.Group("/api/v1/payment", middlewares...)
-	protected.POST("/transactions", m.handler.CreateTransaction)
+	protected.POST("/transactions", m.controller.CreateTransaction)
 
-	router.POST("/api/v1/payment/webhook", m.handler.Webhook)
+	router.POST("/api/v1/payment/webhook", m.controller.Webhook)
 }
-
-

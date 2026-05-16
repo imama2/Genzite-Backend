@@ -1,21 +1,21 @@
-package handler
+package controller
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/service"
 	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
 
-type PaymentHandler struct {
+type PaymentController struct {
 	service *service.PaymentService
 }
 
-func New(service *service.PaymentService) *PaymentHandler {
-	return &PaymentHandler{service: service}
+func New(service *service.PaymentService) *PaymentController {
+	return &PaymentController{service: service}
 }
 
 type createRequest struct {
@@ -27,16 +27,16 @@ type createResponse struct {
 	RedirectURL string `json:"redirect_url"`
 }
 
-func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
+func (h *PaymentController) CreateTransaction(c *gin.Context) {
 	userID, ok := getUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		responses.Unauthorized(c, "unauthorized")
 		return
 	}
 
 	var req createRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.SiteID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		responses.BadRequest(c, "invalid request")
 		return
 	}
 
@@ -44,29 +44,29 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidInput):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+			responses.BadRequest(c, "invalid input")
 		case errors.Is(err, webbuilder.ErrSiteNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": "site not found"})
+			responses.NotFound(c, "site not found")
 		case errors.Is(err, webbuilder.ErrUnauthorized):
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			responses.ForbiddenResponse(c, "forbidden")
 		case errors.Is(err, service.ErrWebBuilderMissing):
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "web-builder service not configured"})
+			responses.ServiceUnavailableResponse(c, "web-builder service not configured")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create payment"})
+			responses.ServerError(c, "failed to create payment")
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, createResponse{
+	responses.Ok(c, "payment created", createResponse{
 		OrderID:     result.OrderID,
 		RedirectURL: result.RedirectURL,
 	})
 }
 
-func (h *PaymentHandler) Webhook(c *gin.Context) {
+func (h *PaymentController) Webhook(c *gin.Context) {
 	var payload service.WebhookPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		responses.BadRequest(c, "invalid request")
 		return
 	}
 
@@ -74,18 +74,18 @@ func (h *PaymentHandler) Webhook(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidSignature):
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid signature"})
+			responses.Unauthorized(c, "invalid signature")
 		case errors.Is(err, service.ErrPaymentNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": "payment not found"})
+			responses.NotFound(c, "payment not found")
 		case errors.Is(err, service.ErrInvalidInput):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+			responses.BadRequest(c, "invalid input")
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process webhook"})
+			responses.ServerError(c, "failed to process webhook")
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": status})
+	responses.Ok(c, "webhook processed", gin.H{"status": status})
 }
 
 func getUserID(c *gin.Context) (uint, bool) {
@@ -96,5 +96,3 @@ func getUserID(c *gin.Context) (uint, bool) {
 	userID, ok := value.(uint)
 	return userID, ok
 }
-
-
