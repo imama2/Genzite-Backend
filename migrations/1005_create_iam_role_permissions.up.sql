@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS iam.role_permissions (role_uuid UUID NOT NULL REFERENCES iam.roles(uuid) ON DELETE CASCADE, permission_uuid UUID NOT NULL REFERENCES iam.permissions(uuid) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (role_uuid, permission_uuid));
