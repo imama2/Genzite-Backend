@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"errors"
@@ -9,15 +9,15 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/services/migrations/service"
 )
 
-type MigrationHandler struct {
+type MigrationController struct {
 	service *service.MigrationService
 }
 
-func New(service *service.MigrationService) *MigrationHandler {
-	return &MigrationHandler{service: service}
+func New(service *service.MigrationService) *MigrationController {
+	return &MigrationController{service: service}
 }
 
-func (h *MigrationHandler) Up(c *gin.Context) {
+func (h *MigrationController) Up(c *gin.Context) {
 	steps, err := parseSteps(c, false)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -33,7 +33,7 @@ func (h *MigrationHandler) Up(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "version": status.Version, "dirty": status.Dirty})
 }
 
-func (h *MigrationHandler) Down(c *gin.Context) {
+func (h *MigrationController) Down(c *gin.Context) {
 	steps, err := parseSteps(c, true)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -49,7 +49,7 @@ func (h *MigrationHandler) Down(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "version": status.Version, "dirty": status.Dirty})
 }
 
-func (h *MigrationHandler) Seed(c *gin.Context) {
+func (h *MigrationController) Seed(c *gin.Context) {
 	if err := h.service.Seed(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,7 +58,7 @@ func (h *MigrationHandler) Seed(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-func (h *MigrationHandler) Version(c *gin.Context) {
+func (h *MigrationController) Version(c *gin.Context) {
 	status, err := h.service.Status(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read migration version"})
@@ -84,4 +84,3 @@ func parseSteps(c *gin.Context, required bool) (int, error) {
 
 	return steps, nil
 }
-

@@ -7,16 +7,16 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
-	"github.com/imama2/Genzite-Backend/internal/services/migrations/handler"
+	"github.com/imama2/Genzite-Backend/internal/services/migrations/controller"
 	"github.com/imama2/Genzite-Backend/internal/services/migrations/service"
 	"gorm.io/gorm"
 )
 
 type Module struct {
-	logger  *slog.Logger
-	cfg     *config.Config
-	service *service.MigrationService
-	handler *handler.MigrationHandler
+	logger     *slog.Logger
+	cfg        *config.Config
+	service    *service.MigrationService
+	controller *controller.MigrationController
 }
 
 func NewModule(logger *slog.Logger) *Module {
@@ -30,7 +30,7 @@ func (m *Module) Name() string {
 func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
 	m.cfg = cfg
 	m.service = service.New(cfg, db, m.logger)
-	m.handler = handler.New(m.service)
+	m.controller = controller.New(m.service)
 	return nil
 }
 
@@ -39,9 +39,8 @@ func (m *Module) RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.Hand
 		"/migrations",
 		append(middlewares, middleware.RequireRoles("admin"), middleware.RequirePermissions("migrations:*"))...,
 	)
-	protected.POST("/up", m.handler.Up)
-	protected.POST("/down", m.handler.Down)
-	protected.POST("/seed", m.handler.Seed)
-	protected.GET("/version", m.handler.Version)
+	protected.POST("/up", m.controller.Up)
+	protected.POST("/down", m.controller.Down)
+	protected.POST("/seed", m.controller.Seed)
+	protected.GET("/version", m.controller.Version)
 }
-
