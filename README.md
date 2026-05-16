@@ -5,12 +5,12 @@
 Base URL: http://localhost:8080
 
 ### Health
-- URL: http://localhost:8080/health
+- URL: http://localhost:8080/api/v1/health
 - Request header: none
 - Request body: none
 
 ### Auth
-- URL: http://localhost:8080/auth/register
+- URL: http://localhost:8080/api/v1/auth/register
 - Request header: Content-Type: application/json
 - Request body:
 ```json
@@ -21,7 +21,7 @@ Base URL: http://localhost:8080
 }
 ```
 
-- URL: http://localhost:8080/auth/login
+- URL: http://localhost:8080/api/v1/auth/login
 - Request header: Content-Type: application/json
 - Request body:
 ```json
@@ -31,38 +31,38 @@ Base URL: http://localhost:8080
 }
 ```
 
-- URL: http://localhost:8080/auth/me
+- URL: http://localhost:8080/api/v1/auth/me
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 
-- URL: http://localhost:8080/auth/google/login
+- URL: http://localhost:8080/api/v1/auth/google/login
 - Request header: none
 - Request body: none
 
-- URL: http://localhost:8080/auth/google/callback?state=<state>&code=<code>
+- URL: http://localhost:8080/api/v1/auth/google/callback?state=<state>&code=<code>
 - Request header: none
 - Request body: none
 
 ### Migrations (admin + migrations:* permission required)
-- URL: http://localhost:8080/migrations/up
+- URL: http://localhost:8080/api/v1/migrations/up
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 - Optional query: steps=<positive integer>
 
-- URL: http://localhost:8080/migrations/down?steps=<positive integer>
+- URL: http://localhost:8080/api/v1/migrations/down?steps=<positive integer>
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 
-- URL: http://localhost:8080/migrations/seed
+- URL: http://localhost:8080/api/v1/migrations/seed
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 
-- URL: http://localhost:8080/migrations/version
+- URL: http://localhost:8080/api/v1/migrations/version
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 
 ### Web Builder
-- URL: http://localhost:8080/api/v1/web-builder/sites
+- URL: http://localhost:8080/api/v1/api/v1/web-builder/sites
 - Request header: Authorization: Bearer <jwt>
 - Request body:
 ```json
@@ -81,16 +81,16 @@ Base URL: http://localhost:8080
 }
 ```
 
-- URL: http://localhost:8080/api/v1/web-builder/sites/:id/publish
+- URL: http://localhost:8080/api/v1/api/v1/web-builder/sites/:id/publish
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
 
-- URL (auto serve only): http://localhost:8080/:slug
+- URL (auto serve only): http://localhost:8080/api/v1/:slug
 - Request header: none
 - Request body: none
 
 ### Chatbot
-- URL: http://localhost:8080/api/v1/chatbot/generate
+- URL: http://localhost:8080/api/v1/api/v1/chatbot/generate
 - Request header: Authorization: Bearer <jwt>
 - Request body:
 ```json
@@ -108,7 +108,7 @@ Base URL: http://localhost:8080
 ```
 
 ### Payment
-- URL: http://localhost:8080/api/v1/payment/transactions
+- URL: http://localhost:8080/api/v1/api/v1/payment/transactions
 - Request header: Authorization: Bearer <jwt>
 - Request body:
 ```json
@@ -117,7 +117,7 @@ Base URL: http://localhost:8080
 }
 ```
 
-- URL: http://localhost:8080/api/v1/payment/webhook
+- URL: http://localhost:8080/api/v1/api/v1/payment/webhook
 - Request header: Content-Type: application/json
 - Request body:
 ```json
@@ -132,6 +132,6 @@ Base URL: http://localhost:8080
 ```
 
 ### Template
-- URL: http://localhost:8080/api/v1/template/ping
+- URL: http://localhost:8080/api/v1/api/v1/template/ping
 - Request header: Authorization: Bearer <jwt>
 - Request body: none
