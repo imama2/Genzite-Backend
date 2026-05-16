@@ -7,3 +7,7 @@ type Permission struct {
 	Name        string `gorm:"uniqueIndex;not null"`
 	Description string
 }
+
+func (Permission) TableName() string {
+	return "iam.permissions"
+}

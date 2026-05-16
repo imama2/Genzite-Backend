@@ -18,5 +18,5 @@ type Site struct {
 }
 
 func (Site) TableName() string {
-	return "web_builder_sites"
+	return "web_builder.web_builder_sites"
 }
