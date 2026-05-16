@@ -39,8 +39,8 @@ func (m *Module) RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.Hand
 		"/migrations",
 		append(middlewares, middleware.RequireRoles("admin"), middleware.RequirePermissions("migrations:*"))...,
 	)
-	protected.POST("/up", m.controller.Up)
-	protected.POST("/down", m.controller.Down)
-	protected.POST("/seed", m.controller.Seed)
+	protected.POST("/migrate-up", m.controller.Up)
+	protected.POST("/migrate-down", m.controller.Down)
+	protected.POST("/seed-up", m.controller.Seed)
 	protected.GET("/version", m.controller.Version)
 }
