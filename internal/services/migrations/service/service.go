@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,7 +15,9 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
+	coredb "github.com/imama2/Genzite-Backend/internal/core/db"
 	"github.com/imama2/Genzite-Backend/internal/services/migrations/seed"
+	_ "github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -144,23 +147,36 @@ func (s *MigrationService) runMigrationInFolder(ctx context.Context, folder stri
 }
 
 func (s *MigrationService) newMigrator(folder string) (*migrate.Migrate, error) {
-	sqlDB, err := s.db.DB()
+	dsn, err := coredb.BuildDatabaseDSN(s.cfg)
 	if err != nil {
-		return nil, fmt.Errorf("get sql db: %w", err)
+		return nil, err
+	}
+	fmt.Println(dsn)
+	sqlDB, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open migration database: %w", err)
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("ping migration database: %w", err)
 	}
 
 	driver, err := postgres.WithInstance(sqlDB, &postgres.Config{})
 	if err != nil {
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("create postgres driver: %w", err)
 	}
 
 	sourceURL, err := s.migrationSourceURL(folder)
 	if err != nil {
+		_ = sqlDB.Close()
 		return nil, err
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(sourceURL, "postgres", driver)
 	if err != nil {
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("init migrator: %w", err)
 	}
 

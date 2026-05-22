@@ -34,6 +34,10 @@ func Connect(cfg *config.Config, logger *slog.Logger) (*gorm.DB, error) {
 	return database, nil
 }
 
+func BuildDatabaseDSN(cfg *config.Config) (string, error) {
+	return buildDatabaseDSN(cfg.DatabaseURL, cfg.DatabaseUsername, cfg.DatabasePassword)
+}
+
 func buildDatabaseDSN(baseURL, username, password string) (string, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil {

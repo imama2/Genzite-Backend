@@ -45,6 +45,7 @@ help: ## Show this help
 	@echo "  docker-down         Stop stack and remove volumes"
 	@echo "  docker-rebuild      Rebuild and restart app container only"
 	@echo "  docker-logs         Follow logs from app container"
+	@echo "  migrate-cli         Run migrations + seed via CLI"
 	@echo "  migrate-up          POST /api/v1/migrations/up (TOKEN required)"
 	@echo "  migrate-down        POST /api/v1/migrations/down (TOKEN required)"
 	@echo "  seed                POST /api/v1/migrations/seed-all (TOKEN required)"
@@ -107,6 +108,10 @@ seed: ## Run all seeders (TOKEN required)
 	curl -X POST $(SERVER_URL)/api/v1/migrations/seed-all \
 		-H "Authorization: Bearer $(TOKEN)" \
 		-H "Content-Type: application/json"
+
+.PHONY: migrate-cli
+migrate-cli: ## Run migrations + seed from CLI
+	$(GO) run ./cmd/migrate
 
 .PHONY: fmt
 fmt: ## Format code

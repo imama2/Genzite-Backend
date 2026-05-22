@@ -35,10 +35,12 @@ func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
 }
 
 func (m *Module) RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.HandlerFunc) {
-	protected := router.Group(
-		"/migrations",
-		append(middlewares, middleware.RequireRoles("admin"), middleware.RequirePermissions("migrations:*"))...,
-	)
+	routeMiddlewares := append([]gin.HandlerFunc{}, middlewares...)
+	if m.cfg == nil || m.cfg.MigrationsRequireAdminRole {
+		routeMiddlewares = append(routeMiddlewares, middleware.RequireRoles("admin"), middleware.RequirePermissions("migrations:*"))
+	}
+
+	protected := router.Group("/migrations", routeMiddlewares...)
 	protected.POST("/migrate-up", m.controller.Up)
 	protected.POST("/migrate-down", m.controller.Down)
 	protected.POST("/seed-up", m.controller.Seed)
