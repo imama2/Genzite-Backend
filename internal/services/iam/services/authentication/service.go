@@ -14,7 +14,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/services/iam/models"
-	"github.com/imama2/Genzite-Backend/internal/services/iam/repository"
+	repository "github.com/imama2/Genzite-Backend/internal/services/iam/repository/database"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

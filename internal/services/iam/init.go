@@ -4,7 +4,7 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/services/iam/controller"
-	"github.com/imama2/Genzite-Backend/internal/services/iam/repository"
+	repository "github.com/imama2/Genzite-Backend/internal/services/iam/repository/database"
 	"github.com/imama2/Genzite-Backend/internal/services/iam/services/authentication"
 	"gorm.io/gorm"
 )
