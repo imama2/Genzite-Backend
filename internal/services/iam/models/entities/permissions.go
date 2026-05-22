@@ -1,13 +1,13 @@
-package models
+package entities
 
 import "gorm.io/gorm"
 
-type Permission struct {
+type Permissions struct {
 	gorm.Model
 	Name        string `gorm:"uniqueIndex;not null"`
 	Description string
 }
 
-func (Permission) TableName() string {
+func (Permissions) TableName() string {
 	return "iam.permissions"
 }

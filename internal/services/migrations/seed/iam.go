@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/imama2/Genzite-Backend/internal/core/config"
-	"github.com/imama2/Genzite-Backend/internal/services/iam/models"
+	dbentities "github.com/imama2/Genzite-Backend/internal/services/iam/models/entities"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -64,8 +64,8 @@ func IAM(ctx context.Context, db *gorm.DB, cfg *config.Config, logger *slog.Logg
 	})
 }
 
-func ensurePermission(tx *gorm.DB, name, description string) (*models.Permission, error) {
-	var perm models.Permission
+func ensurePermission(tx *gorm.DB, name, description string) (*dbentities.Permissions, error) {
+	var perm dbentities.Permissions
 	err := tx.Where("name = ?", name).First(&perm).Error
 	if err == nil {
 		return &perm, nil
@@ -74,15 +74,15 @@ func ensurePermission(tx *gorm.DB, name, description string) (*models.Permission
 		return nil, err
 	}
 
-	perm = models.Permission{Name: name, Description: description}
+	perm = dbentities.Permissions{Name: name, Description: description}
 	if err := tx.Create(&perm).Error; err != nil {
 		return nil, err
 	}
 	return &perm, nil
 }
 
-func ensureRole(tx *gorm.DB, name, description string) (*models.Role, error) {
-	var role models.Role
+func ensureRole(tx *gorm.DB, name, description string) (*dbentities.Roles, error) {
+	var role dbentities.Roles
 	err := tx.Where("name = ?", name).First(&role).Error
 	if err == nil {
 		return &role, nil
@@ -91,15 +91,15 @@ func ensureRole(tx *gorm.DB, name, description string) (*models.Role, error) {
 		return nil, err
 	}
 
-	role = models.Role{Name: name, Description: description}
+	role = dbentities.Roles{Name: name, Description: description}
 	if err := tx.Create(&role).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
 }
 
-func ensureAdminUser(tx *gorm.DB, email, name, password string) (*models.User, bool, error) {
-	var user models.User
+func ensureAdminUser(tx *gorm.DB, email, name, password string) (*dbentities.Users, bool, error) {
+	var user dbentities.Users
 	err := tx.Where("email = ?", email).First(&user).Error
 	if err == nil {
 		return &user, false, nil
@@ -114,7 +114,7 @@ func ensureAdminUser(tx *gorm.DB, email, name, password string) (*models.User, b
 	}
 
 	passwordHash := string(hash)
-	user = models.User{
+	user = dbentities.Users{
 		Email:        email,
 		Name:         name,
 		PasswordHash: &passwordHash,
@@ -126,4 +126,3 @@ func ensureAdminUser(tx *gorm.DB, email, name, password string) (*models.User, b
 
 	return &user, true, nil
 }
-

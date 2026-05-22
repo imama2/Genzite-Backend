@@ -13,19 +13,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
-	"github.com/imama2/Genzite-Backend/internal/services/iam/models"
+	"github.com/imama2/Genzite-Backend/internal/services/iam/models/dto"
+	dbentities "github.com/imama2/Genzite-Backend/internal/services/iam/models/entities"
 	repository "github.com/imama2/Genzite-Backend/internal/services/iam/repository/database"
+	utilErrors "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"
-)
-
-var (
-	ErrUserExists          = errors.New("user already exists")
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrGoogleNotConfigured = errors.New("google oauth is not configured")
-	ErrGoogleAuthFailed    = errors.New("google authentication failed")
 )
 
 type Service struct {
@@ -36,25 +31,7 @@ type Service struct {
 	httpClient  *http.Client
 }
 
-type RegisterInput struct {
-	Email    string
-	Password string
-	Name     string
-}
-
-type LoginInput struct {
-	Email    string
-	Password string
-}
-
-type GoogleUserInfo struct {
-	ID            string `json:"id"`
-	Email         string `json:"email"`
-	Name          string `json:"name"`
-	VerifiedEmail bool   `json:"verified_email"`
-}
-
-func New(cfg *config.Config, repo repository.Repository, logger *slog.Logger) *Service {
+func New(cfg *config.Config, repo repository.Repository, logger *slog.Logger) AuthServiceInterface {
 	service := &Service{
 		repo:       repo,
 		cfg:        cfg,
@@ -78,15 +55,15 @@ func New(cfg *config.Config, repo repository.Repository, logger *slog.Logger) *S
 	return service
 }
 
-func (s *Service) Register(ctx context.Context, input RegisterInput) (*models.User, string, error) {
+func (s *Service) Register(ctx context.Context, input dto.RegisterRequest) (*dbentities.Users, string, error) {
 	email := normalizeEmail(input.Email)
 	if email == "" || input.Password == "" {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", utilErrors.ErrInvalidCredentials
 	}
 
 	_, err := s.repo.GetUserByEmail(ctx, email)
 	if err == nil {
-		return nil, "", ErrUserExists
+		return nil, "", utilErrors.ErrUserExists
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, "", err
@@ -98,7 +75,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*models.Us
 	}
 
 	passwordHash := string(hash)
-	user := &models.User{
+	user := &dbentities.Users{
 		Email:        email,
 		Name:         strings.TrimSpace(input.Name),
 		PasswordHash: &passwordHash,
@@ -116,26 +93,26 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*models.Us
 	return user, token, nil
 }
 
-func (s *Service) Login(ctx context.Context, input LoginInput) (*models.User, string, error) {
+func (s *Service) Login(ctx context.Context, input dto.LoginRequest) (*dbentities.Users, string, error) {
 	email := normalizeEmail(input.Email)
 	if email == "" || input.Password == "" {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", utilErrors.ErrInvalidCredentials
 	}
 
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, "", ErrInvalidCredentials
+			return nil, "", utilErrors.ErrInvalidCredentials
 		}
 		return nil, "", err
 	}
 
 	if user.PasswordHash == nil {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", utilErrors.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(input.Password)); err != nil {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", utilErrors.ErrInvalidCredentials
 	}
 
 	token, err := s.issueToken(user)
@@ -146,21 +123,21 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*models.User, st
 	return user, token, nil
 }
 
-func (s *Service) GoogleAuthURL(state string) (string, error) {
+func (s *Service) GoogleOAuth(ctx context.Context, state string) (string, error) {
 	if s.oauthConfig == nil {
-		return "", ErrGoogleNotConfigured
+		return "", utilErrors.ErrGoogleNotConfigured
 	}
 	return s.oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline), nil
 }
 
-func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*models.User, string, error) {
+func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*dbentities.Users, string, error) {
 	if s.oauthConfig == nil {
-		return nil, "", ErrGoogleNotConfigured
+		return nil, "", utilErrors.ErrGoogleNotConfigured
 	}
 
 	token, err := s.oauthConfig.Exchange(ctx, code)
 	if err != nil {
-		return nil, "", ErrGoogleAuthFailed
+		return nil, "", utilErrors.ErrGoogleAuthFailed
 	}
 
 	client := s.oauthConfig.Client(ctx, token)
@@ -168,22 +145,22 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*model
 
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return nil, "", ErrGoogleAuthFailed
+		return nil, "", utilErrors.ErrGoogleAuthFailed
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", ErrGoogleAuthFailed
+		return nil, "", utilErrors.ErrGoogleAuthFailed
 	}
 
-	var info GoogleUserInfo
+	var info dto.GoogleUserInfo
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		return nil, "", ErrGoogleAuthFailed
+		return nil, "", utilErrors.ErrGoogleAuthFailed
 	}
 
 	email := normalizeEmail(info.Email)
 	if info.ID == "" || email == "" {
-		return nil, "", ErrGoogleAuthFailed
+		return nil, "", utilErrors.ErrGoogleAuthFailed
 	}
 
 	user, err := s.repo.GetUserByGoogleID(ctx, info.ID)
@@ -207,7 +184,7 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*model
 			}
 			user = userByEmail
 		} else {
-			user = &models.User{
+			user = &dbentities.Users{
 				Email:    email,
 				Name:     strings.TrimSpace(info.Name),
 				GoogleID: &info.ID,
@@ -254,11 +231,11 @@ func (s *Service) LoadAuthContext(ctx context.Context, userID uint) (*middleware
 	}, nil
 }
 
-func (s *Service) GetUserProfile(ctx context.Context, userID uint) (*models.User, error) {
+func (s *Service) GetUserProfile(ctx context.Context, userID uint) (*dbentities.Users, error) {
 	return s.repo.GetUserByID(ctx, userID)
 }
 
-func (s *Service) issueToken(user *models.User) (string, error) {
+func (s *Service) issueToken(user *dbentities.Users) (string, error) {
 	now := time.Now()
 	claims := middleware.Claims{
 		Email: user.Email,

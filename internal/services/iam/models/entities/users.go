@@ -1,17 +1,17 @@
-package models
+package entities
 
 import "gorm.io/gorm"
 
-type User struct {
+type Users struct {
 	gorm.Model
 	UUID         string `gorm:"uniqueIndex;not null"`
 	Email        string `gorm:"uniqueIndex;not null"`
 	Name         string
 	PasswordHash *string `gorm:"column:password_hash"`
 	GoogleID     *string `gorm:"column:google_id;uniqueIndex"`
-	Roles        []Role  `gorm:"many2many:iam.user_roles;"`
+	Roles        []Roles `gorm:"many2many:iam.user_roles;"`
 }
 
-func (User) TableName() string {
+func (Users) TableName() string {
 	return "iam.users"
 }
