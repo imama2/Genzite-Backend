@@ -1,4 +1,4 @@
-package service
+package authentication
 
 import (
 	"context"
@@ -28,7 +28,7 @@ var (
 	ErrGoogleAuthFailed    = errors.New("google authentication failed")
 )
 
-type AuthService struct {
+type Service struct {
 	repo        repository.Repository
 	cfg         *config.Config
 	logger      *slog.Logger
@@ -54,8 +54,8 @@ type GoogleUserInfo struct {
 	VerifiedEmail bool   `json:"verified_email"`
 }
 
-func NewAuthService(cfg *config.Config, repo repository.Repository, logger *slog.Logger) *AuthService {
-	service := &AuthService{
+func New(cfg *config.Config, repo repository.Repository, logger *slog.Logger) *Service {
+	service := &Service{
 		repo:       repo,
 		cfg:        cfg,
 		logger:     logger,
@@ -78,7 +78,7 @@ func NewAuthService(cfg *config.Config, repo repository.Repository, logger *slog
 	return service
 }
 
-func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*models.User, string, error) {
+func (s *Service) Register(ctx context.Context, input RegisterInput) (*models.User, string, error) {
 	email := normalizeEmail(input.Email)
 	if email == "" || input.Password == "" {
 		return nil, "", ErrInvalidCredentials
@@ -116,7 +116,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*model
 	return user, token, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, input LoginInput) (*models.User, string, error) {
+func (s *Service) Login(ctx context.Context, input LoginInput) (*models.User, string, error) {
 	email := normalizeEmail(input.Email)
 	if email == "" || input.Password == "" {
 		return nil, "", ErrInvalidCredentials
@@ -146,14 +146,14 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*models.User
 	return user, token, nil
 }
 
-func (s *AuthService) GoogleAuthURL(state string) (string, error) {
+func (s *Service) GoogleAuthURL(state string) (string, error) {
 	if s.oauthConfig == nil {
 		return "", ErrGoogleNotConfigured
 	}
 	return s.oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline), nil
 }
 
-func (s *AuthService) HandleGoogleCallback(ctx context.Context, code string) (*models.User, string, error) {
+func (s *Service) HandleGoogleCallback(ctx context.Context, code string) (*models.User, string, error) {
 	if s.oauthConfig == nil {
 		return nil, "", ErrGoogleNotConfigured
 	}
@@ -226,7 +226,7 @@ func (s *AuthService) HandleGoogleCallback(ctx context.Context, code string) (*m
 	return user, jwtToken, nil
 }
 
-func (s *AuthService) LoadAuthContext(ctx context.Context, userID uint) (*middleware.AuthContext, error) {
+func (s *Service) LoadAuthContext(ctx context.Context, userID uint) (*middleware.AuthContext, error) {
 	user, err := s.repo.GetUserWithRoles(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -254,11 +254,11 @@ func (s *AuthService) LoadAuthContext(ctx context.Context, userID uint) (*middle
 	}, nil
 }
 
-func (s *AuthService) GetUserProfile(ctx context.Context, userID uint) (*models.User, error) {
+func (s *Service) GetUserProfile(ctx context.Context, userID uint) (*models.User, error) {
 	return s.repo.GetUserByID(ctx, userID)
 }
 
-func (s *AuthService) issueToken(user *models.User) (string, error) {
+func (s *Service) issueToken(user *models.User) (string, error) {
 	now := time.Now()
 	claims := middleware.Claims{
 		Email: user.Email,
@@ -277,4 +277,3 @@ func (s *AuthService) issueToken(user *models.User) (string, error) {
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
-

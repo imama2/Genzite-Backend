@@ -8,16 +8,16 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/services/iam/entity"
-	"github.com/imama2/Genzite-Backend/internal/services/iam/service"
+	"github.com/imama2/Genzite-Backend/internal/services/iam/services/authentication"
 	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
 
 type AuthController struct {
 	cfg     *config.Config
-	service *service.AuthService
+	service *authentication.Service
 }
 
-func NewAuthController(cfg *config.Config, service *service.AuthService) *AuthController {
+func NewAuthController(cfg *config.Config, service *authentication.Service) *AuthController {
 	return &AuthController{
 		cfg:     cfg,
 		service: service,
@@ -31,16 +31,16 @@ func (h *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	user, token, err := h.service.Register(c.Request.Context(), service.RegisterInput{
+	user, token, err := h.service.Register(c.Request.Context(), authentication.RegisterInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Name:     req.Name,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrUserExists):
+		case errors.Is(err, authentication.ErrUserExists):
 			c.JSON(http.StatusConflict, gin.H{"error": "user already exists"})
-		case errors.Is(err, service.ErrInvalidCredentials):
+		case errors.Is(err, authentication.ErrInvalidCredentials):
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register"})
@@ -61,13 +61,13 @@ func (h *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	user, token, err := h.service.Login(c.Request.Context(), service.LoginInput{
+	user, token, err := h.service.Login(c.Request.Context(), authentication.LoginInput{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrInvalidCredentials):
+		case errors.Is(err, authentication.ErrInvalidCredentials):
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to login"})
@@ -111,7 +111,7 @@ func (h *AuthController) GoogleCallback(c *gin.Context) {
 	user, token, err := h.service.HandleGoogleCallback(c.Request.Context(), code)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrGoogleNotConfigured):
+		case errors.Is(err, authentication.ErrGoogleNotConfigured):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "google oauth is not configured"})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "google authentication failed"})
@@ -155,4 +155,3 @@ func generateState() string {
 	}
 	return encodeState(bytes)
 }
-
