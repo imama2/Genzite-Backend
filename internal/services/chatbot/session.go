@@ -68,6 +68,12 @@ type IncomingMessage struct {
 	Content string `json:"content"`
 }
 
+// OutgoingMessage represents a message sent from the server to the client.
+type OutgoingMessage struct {
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload"`
+}
+
 // ProcessMessage is the entry point for all incoming messages from the user.
 // It acts as a state machine, routing the message based on the session's current state.
 func (s *Session) ProcessMessage(rawMessage []byte) error {
@@ -96,11 +102,21 @@ func (s *Session) ProcessMessage(rawMessage []byte) error {
 	case StateAwaitingUserInput:
 		if msg.Type == "user_response" {
 			s.state = StateArchitectConversation
-			// The response will be sent by the handleArchitectStream goroutine
-			// For now, we just log it.
 			s.logger.Info("User response received, passing to architect", "response", msg.Content)
-			// This requires sending the response to the active stream, which will be handled
-			// in the `handleArchitectStream` method.
+
+			// Send the user's response to the architect agent
+			req := &architect.AnalyzeRequest{
+				Event: &architect.AnalyzeRequest_UserResponse_{
+					UserResponse: &architect.AnalyzeRequest_UserResponse{
+						QuestionId: s.context.LastQuestionID,
+						Answer:     msg.Content,
+					},
+				},
+			}
+			if err := s.architectStream.Send(req); err != nil {
+				s.logger.Error("Failed to send user response to architect", "error", err)
+				// TODO: Handle error, maybe set state to Failed
+			}
 		} else {
 			s.logger.Warn("Received unexpected message in AwaitingUserInput state", "messageType", msg.Type)
 		}
@@ -144,6 +160,50 @@ func (s *Session) startArchitectConversation() {
 	}
 
 	// Now, listen for responses from the architect in a separate goroutine
-	// This will be implemented in the next step.
-	// go s.handleArchitectStream()
+	go s.handleArchitectStream()
+}
+
+// handleArchitectStream runs in a goroutine to listen for messages from the agent.
+func (s *Session) handleArchitectStream() {
+	for {
+		resp, err := s.architectStream.Recv()
+		if err != nil {
+			// TODO: Handle different kinds of errors, e.g., io.EOF means stream closed cleanly.
+			s.mu.Lock()
+			s.state = StateFailed
+			s.lastError = err
+			s.mu.Unlock()
+			s.logger.Error("Failed to receive from architect stream", "error", err)
+			return
+		}
+
+		s.mu.Lock()
+		switch event := resp.Event.(type) {
+		case *architect.AnalyzeResponse_Question:
+			s.state = StateAwaitingUserInput
+			s.context.LastQuestionID = event.Question.QuestionId
+			s.logger.Info("Received question from architect", "questionId", event.Question.QuestionId)
+			s.sendMessageToClient("architect_question", event.Question)
+
+		case *architect.AnalyzeResponse_Update:
+			s.context.ArchitectBlueprint = event.Update.BlueprintChunkJson // Or append, depending on strategy
+			s.logger.Info("Received blueprint update from architect")
+			s.sendMessageToClient("blueprint_update", event.Update)
+		}
+		s.mu.Unlock()
+	}
+}
+
+// sendMessageToClient is a helper to marshal and send messages to the WebSocket client.
+func (s *Session) sendMessageToClient(msgType string, payload interface{}) {
+	msg := OutgoingMessage{
+		Type:    msgType,
+		Payload: payload,
+	}
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		s.logger.Error("Failed to marshal outgoing message", "error", err)
+		return
+	}
+	s.sendToClient <- jsonMsg
 }
