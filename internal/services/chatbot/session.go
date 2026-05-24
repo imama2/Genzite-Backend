@@ -151,10 +151,10 @@ func (s *Session) startArchitectConversation() {
 	initialReq := &architect.AnalyzeRequest{
 		Event: &architect.AnalyzeRequest_InitialPrompt_{
 			InitialPrompt: &architect.AnalyzeRequest_InitialPrompt{
-				BuildId:    s.context.BuildID
-				UserPrompt: s.context.UserPrompt
-			}
-		}
+				BuildId:    s.context.BuildID,
+				UserPrompt: s.context.UserPrompt,
+			},
+		},
 	}
 	if err := stream.Send(initialReq); err != nil {
 		s.logger.Error("Failed to send initial prompt to architect", "error", err)
@@ -193,7 +193,7 @@ func (s *Session) handleArchitectStream() {
 			s.logger.Info("Received blueprint update from architect")
 			s.sendMessageToClient("blueprint_update", event.Update)
 
-		case *architect.AnalyzeResponse_ConversationComplete:
+		case *architect.AnalyzeResponse_ConversationComplete_:
 			s.logger.Info("Architect conversation complete. Ready to finalize.")
 			s.sendMessageToClient("conversation_complete", nil)
 			// The stream will be closed by the server, which we'll detect in Recv().
