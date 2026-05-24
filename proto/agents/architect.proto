@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package agents.architect;
+
+option go_package = "github.com/Genzite/Backend/gen/go/agents/architect";
+
+// The Architect service handles prompt analysis and blueprint generation.
+service Architect {
+  // AnalyzePrompt facilitates a back-and-forth clarification conversation.
+  // The client streams initial context and user responses, and the server
+  // streams back questions or blueprint updates.
+  rpc AnalyzePrompt(stream AnalyzeRequest) returns (stream AnalyzeResponse);
+
+  // FinalizeBlueprint is a unary call to get the complete blueprint
+  // after the clarification loop is complete.
+  rpc FinalizeBlueprint(FinalizeBlueprintRequest) returns (FinalizeBlueprintResponse);
+}
+
+// Request message for the AnalyzePrompt stream.
+message AnalyzeRequest {
+  oneof event {
+    InitialPrompt initial_prompt = 1;
+    UserResponse user_response = 2;
+  }
+
+  message InitialPrompt {
+    string build_id = 1;
+    string user_prompt = 2;
+    // Optional existing blueprint for iterative edits.
+    string existing_blueprint_json = 3; 
+  }
+
+  message UserResponse {
+    string question_id = 1;
+    string answer = 2;
+  }
+}
+
+// Response message for the AnalyzePrompt stream.
+message AnalyzeResponse {
+  oneof event {
+    ClarificationQuestion question = 1;
+    BlueprintUpdate update = 2;
+  }
+
+  message ClarificationQuestion {
+    string question_id = 1;
+    string text = 2;
+    repeated string options = 3; // For multiple-choice questions
+  }
+
+  message BlueprintUpdate {
+    // Partial or complete blueprint structure as JSON.
+    string blueprint_chunk_json = 1; 
+  }
+}
+
+message FinalizeBlueprintRequest {
+  string build_id = 1;
+}
+
+message FinalizeBlueprintResponse {
+  // The complete and final blueprint structure as JSON.
+  string blueprint_json = 1;
+}
