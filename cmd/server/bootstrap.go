@@ -18,7 +18,7 @@ type serverRuntime struct {
 	logger         *slog.Logger
 	database       *gorm.DB
 	application    *app.App
-	brokerClient   *broker.Client
+	brokerClient   broker.BrokerService
 	modules        *serviceModules
 	authMiddleware gin.HandlerFunc
 }

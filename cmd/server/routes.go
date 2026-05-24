@@ -39,10 +39,6 @@ func registerRoutes(runtime *serverRuntime) {
 			runtime.logger.Error("chatbot requires iam and web-builder services")
 			os.Exit(1)
 		}
-		if err := runtime.modules.chatbot.SetWebBuilder(runtime.modules.webBuilder.Manager()); err != nil {
-			runtime.logger.Error("failed to link web-builder to chatbot", "error", err)
-			os.Exit(1)
-		}
 		runtime.modules.chatbot.RegisterRoutes(api, runtime.authMiddleware)
 	}
 
