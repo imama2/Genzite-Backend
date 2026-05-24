@@ -41,6 +41,7 @@ message AnalyzeResponse {
   oneof event {
     ClarificationQuestion question = 1;
     BlueprintUpdate update = 2;
+    ConversationComplete conversation_complete = 3;
   }
 
   message ClarificationQuestion {
@@ -53,6 +54,9 @@ message AnalyzeResponse {
     // Partial or complete blueprint structure as JSON.
     string blueprint_chunk_json = 1; 
   }
+
+  // Signals that the agent has enough information and the conversation is done.
+  message ConversationComplete {}
 }
 
 message FinalizeBlueprintRequest {

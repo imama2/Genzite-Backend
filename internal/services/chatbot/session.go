@@ -117,6 +117,9 @@ func (s *Session) ProcessMessage(rawMessage []byte) error {
 				s.logger.Error("Failed to send user response to architect", "error", err)
 				// TODO: Handle error, maybe set state to Failed
 			}
+		} else if msg.Type == "finalize_blueprint" {
+			s.state = StateFinalizingBlueprint
+			go s.finalizeBlueprint()
 		} else {
 			s.logger.Warn("Received unexpected message in AwaitingUserInput state", "messageType", msg.Type)
 		}
@@ -148,10 +151,10 @@ func (s *Session) startArchitectConversation() {
 	initialReq := &architect.AnalyzeRequest{
 		Event: &architect.AnalyzeRequest_InitialPrompt_{
 			InitialPrompt: &architect.AnalyzeRequest_InitialPrompt{
-				BuildId:    s.context.BuildID,
-				UserPrompt: s.context.UserPrompt,
-			},
-		},
+				BuildId:    s.context.BuildID
+				UserPrompt: s.context.UserPrompt
+			}
+		}
 	}
 	if err := stream.Send(initialReq); err != nil {
 		s.logger.Error("Failed to send initial prompt to architect", "error", err)
@@ -189,9 +192,42 @@ func (s *Session) handleArchitectStream() {
 			s.context.ArchitectBlueprint = event.Update.BlueprintChunkJson // Or append, depending on strategy
 			s.logger.Info("Received blueprint update from architect")
 			s.sendMessageToClient("blueprint_update", event.Update)
+
+		case *architect.AnalyzeResponse_ConversationComplete:
+			s.logger.Info("Architect conversation complete. Ready to finalize.")
+			s.sendMessageToClient("conversation_complete", nil)
+			// The stream will be closed by the server, which we'll detect in Recv().
+			// We can now allow the user to trigger finalization.
 		}
 		s.mu.Unlock()
 	}
+}
+
+func (s *Session) finalizeBlueprint() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.logger.Info("Finalizing blueprint", "buildId", s.context.BuildID)
+
+	req := &architect.FinalizeBlueprintRequest{
+		BuildId: s.context.BuildID,
+	}
+
+	resp, err := s.agentService.FinalizeBlueprint(context.Background(), req)
+	if err != nil {
+		s.state = StateFailed
+		s.lastError = err
+		s.logger.Error("Failed to finalize blueprint", "error", err)
+		s.sendMessageToClient("finalize_failed", err.Error())
+		return
+	}
+
+	s.state = StateCompleted
+	s.context.ArchitectBlueprint = resp.BlueprintJson
+	s.logger.Info("Blueprint finalized successfully")
+	s.sendMessageToClient("finalize_success", resp)
+
+	// TODO: Next step would be to enqueue the build job.
 }
 
 // sendMessageToClient is a helper to marshal and send messages to the WebSocket client.

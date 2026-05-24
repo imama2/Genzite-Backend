@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x61gents/architect.proto\x12\x10\x61gents.architect\"\xb9\x02\n\x0e\x41nalyzeRequest\x12H\n\x0einitial_prompt\x18\x01 \x01(\x0b\x32..agents.architect.AnalyzeRequest.InitialPromptH\x00\x12\x46\n\ruser_response\x18\x02 \x01(\x0b\x32-.agents.architect.AnalyzeRequest.UserResponseH\x00\x1aW\n\rInitialPrompt\x12\x10\n\x08\x62uild_id\x18\x01 \x01(\t\x12\x13\n\x0buser_prompt\x18\x02 \x01(\t\x12\x1f\n\x17\x65xisting_blueprint_json\x18\x03 \x01(\t\x1a\x33\n\x0cUserResponse\x12\x13\n\x0bquestion_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61nswer\x18\x02 \x01(\tB\x07\n\x05\x65vent\"\xaa\x02\n\x0f\x41nalyzeResponse\x12K\n\x08question\x18\x01 \x01(\x0b\x32\x37.agents.architect.AnalyzeResponse.ClarificationQuestionH\x00\x12\x43\n\x06update\x18\x02 \x01(\x0b\x32\x31.agents.architect.AnalyzeResponse.BlueprintUpdateH\x00\x1aK\n\x15\x43larificationQuestion\x12\x13\n\x0bquestion_id\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\x12\x0f\n\x07options\x18\x03 \x03(\t\x1a/\n\x0f\x42lueprintUpdate\x12\x1c\n\x14\x62lueprint_chunk_json\x18\x01 \x01(\tB\x07\n\x05\x65vent\",\n\x18\x46inalizeBlueprintRequest\x12\x10\n\x08\x62uild_id\x18\x01 \x01(\t\"3\n\x19\x46inalizeBlueprintResponse\x12\x16\n\x0e\x62lueprint_json\x18\x01 \x01(\t2\xd3\x01\n\tArchitect\x12X\n\rAnalyzePrompt\x12 .agents.architect.AnalyzeRequest\x1a!.agents.architect.AnalyzeResponse(\x01\x30\x01\x12l\n\x11\x46inalizeBlueprint\x12*.agents.architect.FinalizeBlueprintRequest\x1a+.agents.architect.FinalizeBlueprintResponseB4Z2github.com/Genzite/Backend/gen/go/agents/architectb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x61gents/architect.proto\x12\x10\x61gents.architect\"\xb9\x02\n\x0e\x41nalyzeRequest\x12H\n\x0einitial_prompt\x18\x01 \x01(\x0b\x32..agents.architect.AnalyzeRequest.InitialPromptH\x00\x12\x46\n\ruser_response\x18\x02 \x01(\x0b\x32-.agents.architect.AnalyzeRequest.UserResponseH\x00\x1aW\n\rInitialPrompt\x12\x10\n\x08\x62uild_id\x18\x01 \x01(\t\x12\x13\n\x0buser_prompt\x18\x02 \x01(\t\x12\x1f\n\x17\x65xisting_blueprint_json\x18\x03 \x01(\t\x1a\x33\n\x0cUserResponse\x12\x13\n\x0bquestion_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61nswer\x18\x02 \x01(\tB\x07\n\x05\x65vent\"\x9b\x03\n\x0f\x41nalyzeResponse\x12K\n\x08question\x18\x01 \x01(\x0b\x32\x37.agents.architect.AnalyzeResponse.ClarificationQuestionH\x00\x12\x43\n\x06update\x18\x02 \x01(\x0b\x32\x31.agents.architect.AnalyzeResponse.BlueprintUpdateH\x00\x12W\n\x15\x63onversation_complete\x18\x03 \x01(\x0b\x32\x36.agents.architect.AnalyzeResponse.ConversationCompleteH\x00\x1aK\n\x15\x43larificationQuestion\x12\x13\n\x0bquestion_id\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\x12\x0f\n\x07options\x18\x03 \x03(\t\x1a/\n\x0f\x42lueprintUpdate\x12\x1c\n\x14\x62lueprint_chunk_json\x18\x01 \x01(\t\x1a\x16\n\x14\x43onversationCompleteB\x07\n\x05\x65vent\",\n\x18\x46inalizeBlueprintRequest\x12\x10\n\x08\x62uild_id\x18\x01 \x01(\t\"3\n\x19\x46inalizeBlueprintResponse\x12\x16\n\x0e\x62lueprint_json\x18\x01 \x01(\t2\xd3\x01\n\tArchitect\x12X\n\rAnalyzePrompt\x12 .agents.architect.AnalyzeRequest\x1a!.agents.architect.AnalyzeResponse(\x01\x30\x01\x12l\n\x11\x46inalizeBlueprint\x12*.agents.architect.FinalizeBlueprintRequest\x1a+.agents.architect.FinalizeBlueprintResponseB4Z2github.com/Genzite/Backend/gen/go/agents/architectb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,15 +39,17 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ANALYZEREQUEST_USERRESPONSE']._serialized_start=298
   _globals['_ANALYZEREQUEST_USERRESPONSE']._serialized_end=349
   _globals['_ANALYZERESPONSE']._serialized_start=361
-  _globals['_ANALYZERESPONSE']._serialized_end=659
-  _globals['_ANALYZERESPONSE_CLARIFICATIONQUESTION']._serialized_start=526
-  _globals['_ANALYZERESPONSE_CLARIFICATIONQUESTION']._serialized_end=601
-  _globals['_ANALYZERESPONSE_BLUEPRINTUPDATE']._serialized_start=603
-  _globals['_ANALYZERESPONSE_BLUEPRINTUPDATE']._serialized_end=650
-  _globals['_FINALIZEBLUEPRINTREQUEST']._serialized_start=661
-  _globals['_FINALIZEBLUEPRINTREQUEST']._serialized_end=705
-  _globals['_FINALIZEBLUEPRINTRESPONSE']._serialized_start=707
-  _globals['_FINALIZEBLUEPRINTRESPONSE']._serialized_end=758
-  _globals['_ARCHITECT']._serialized_start=761
-  _globals['_ARCHITECT']._serialized_end=972
+  _globals['_ANALYZERESPONSE']._serialized_end=772
+  _globals['_ANALYZERESPONSE_CLARIFICATIONQUESTION']._serialized_start=615
+  _globals['_ANALYZERESPONSE_CLARIFICATIONQUESTION']._serialized_end=690
+  _globals['_ANALYZERESPONSE_BLUEPRINTUPDATE']._serialized_start=692
+  _globals['_ANALYZERESPONSE_BLUEPRINTUPDATE']._serialized_end=739
+  _globals['_ANALYZERESPONSE_CONVERSATIONCOMPLETE']._serialized_start=741
+  _globals['_ANALYZERESPONSE_CONVERSATIONCOMPLETE']._serialized_end=763
+  _globals['_FINALIZEBLUEPRINTREQUEST']._serialized_start=774
+  _globals['_FINALIZEBLUEPRINTREQUEST']._serialized_end=818
+  _globals['_FINALIZEBLUEPRINTRESPONSE']._serialized_start=820
+  _globals['_FINALIZEBLUEPRINTRESPONSE']._serialized_end=871
+  _globals['_ARCHITECT']._serialized_start=874
+  _globals['_ARCHITECT']._serialized_end=1085
 # @@protoc_insertion_point(module_scope)

@@ -11,7 +11,7 @@ import (
 // AgentService defines the interface for interacting with the Python agent services.
 type AgentService interface {
 	AnalyzePrompt(ctx context.Context, opts ...grpc.CallOption) (architect.Architect_AnalyzePromptClient, error)
-	// TODO: Add FinalizeBlueprint method
+	FinalizeBlueprint(ctx context.Context, in *architect.FinalizeBlueprintRequest, opts ...grpc.CallOption) (*architect.FinalizeBlueprintResponse, error)
 }
 
 // agentServiceClient is the concrete implementation of AgentService.
@@ -37,4 +37,9 @@ func NewService() AgentService {
 func (c *agentServiceClient) AnalyzePrompt(ctx context.Context, opts ...grpc.CallOption) (architect.Architect_AnalyzePromptClient, error) {
 	client := architect.NewArchitectClient(c.architectConn)
 	return client.AnalyzePrompt(ctx, opts...)
+}
+
+func (c *agentServiceClient) FinalizeBlueprint(ctx context.Context, in *architect.FinalizeBlueprintRequest, opts ...grpc.CallOption) (*architect.FinalizeBlueprintResponse, error) {
+	client := architect.NewArchitectClient(c.architectConn)
+	return client.FinalizeBlueprint(ctx, in)
 }
