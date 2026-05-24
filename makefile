@@ -52,6 +52,7 @@ help: ## Show this help
 	@echo "  fmt                 Run go fmt ./..."
 	@echo "  tidy                Run go mod tidy"
 	@echo "  lint                Run golangci-lint"
+	@echo "  proto               Generate gRPC stubs for Go and Python"
 
 .PHONY: run
 run: ## Run the server with air (fallback to go run)
@@ -124,3 +125,22 @@ tidy: ## Tidy go modules
 .PHONY: lint
 lint: ## Lint with golangci-lint
 	golangci-lint run ./...
+
+.PHONY: proto
+proto: ## Generate gRPC stubs
+	@echo "Generating Go gRPC stubs..."
+	if not exist "gen" mkdir "gen"
+	if not exist "gen\go" mkdir "gen\go"
+	protoc --proto_path=proto \
+		--go_out=gen/go --go_opt=paths=source_relative \
+		--go-grpc_out=gen/go --go-grpc_opt=paths=source_relative \
+		proto/agents/architect.proto
+
+	@echo "Generating Python gRPC stubs..."
+	if not exist "python\gen" mkdir "python\gen"
+	if not exist "python\gen\py" mkdir "python\gen\py"
+	python -m grpc_tools.protoc --proto_path=proto \
+		--python_out=python/gen/py \
+		--grpc_python_out=python/gen/py \
+		proto/agents/architect.proto
+	@echo "Done."

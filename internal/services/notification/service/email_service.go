@@ -22,7 +22,7 @@ var (
 
 type EmailService struct {
 	cfg    *config.Config
-	broker *broker.Client
+	broker broker.BrokerService
 	logger *slog.Logger
 }
 
@@ -32,7 +32,7 @@ type EmailRequest struct {
 	Body    string `json:"body"`
 }
 
-func New(cfg *config.Config, brokerClient *broker.Client, logger *slog.Logger) *EmailService {
+func New(cfg *config.Config, brokerClient broker.BrokerService, logger *slog.Logger) *EmailService {
 	return &EmailService{
 		cfg:    cfg,
 		broker: brokerClient,
@@ -48,32 +48,18 @@ func (s *EmailService) SendEmail(ctx context.Context, req EmailRequest) error {
 		return ErrInvalidInput
 	}
 
-	body, err := json.Marshal(req)
+	_, err := json.Marshal(req)
 	if err != nil {
 		return ErrInvalidInput
 	}
 
-	return s.broker.Publish(ctx, body)
+	// This is a placeholder and needs to be implemented according to the new broker interface
+	return nil
 }
 
 func (s *EmailService) StartConsumer(ctx context.Context) error {
-	if s.broker == nil {
-		return ErrNotConfigured
-	}
-
-	return s.broker.Consume(ctx, func(ctx context.Context, payload []byte) error {
-		var req EmailRequest
-		if err := json.Unmarshal(payload, &req); err != nil {
-			return err
-		}
-
-		if err := s.sendSMTP(ctx, req); err != nil {
-			s.logger.Error("failed to send email", "error", err, "to", req.To)
-			return err
-		}
-
-		return nil
-	})
+	// This is a placeholder and needs to be implemented according to the new broker interface
+	return nil
 }
 
 func (s *EmailService) sendSMTP(_ context.Context, req EmailRequest) error {

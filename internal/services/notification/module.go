@@ -25,7 +25,7 @@ func (m *Module) Name() string {
 	return "notification"
 }
 
-func (m *Module) Init(cfg *config.Config, _ *gorm.DB, brokerClient *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, _ *gorm.DB, brokerClient broker.BrokerService) error {
 	m.cfg = cfg
 	m.service = service.New(cfg, brokerClient, m.logger)
 
@@ -43,4 +43,3 @@ func (m *Module) RegisterRoutes(_ *gin.RouterGroup, _ ...gin.HandlerFunc) {}
 func (m *Module) Notifier() *service.EmailService {
 	return m.service
 }
-

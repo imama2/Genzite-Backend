@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error {
 	m.cfg = cfg
 	m.repo = repository.New(db)
 	m.service = authentication.New(cfg, m.repo, m.logger).(*authentication.Service)

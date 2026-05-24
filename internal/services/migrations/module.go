@@ -27,7 +27,7 @@ func (m *Module) Name() string {
 	return "migrations"
 }
 
-func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error {
 	m.cfg = cfg
 	m.service = service.New(cfg, db, m.logger)
 	m.controller = controller.New(m.service)

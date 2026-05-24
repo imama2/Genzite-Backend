@@ -4,22 +4,18 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imama2/Genzite-Backend/internal/services/chatbot/ai"
-	"github.com/imama2/Genzite-Backend/internal/services/chatbot/handler"
-	"github.com/imama2/Genzite-Backend/internal/services/chatbot/service"
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
-	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	"github.com/imama2/Genzite-Backend/internal/services/agents"
 	"gorm.io/gorm"
 )
 
 type Module struct {
-	logger     *slog.Logger
-	cfg        *config.Config
-	aiClient   service.AIClient
-	webBuilder webbuilder.SiteManager
-	service    *service.ChatService
-	handler    *handler.ChatHandler
+	logger       *slog.Logger
+	cfg          *config.Config
+	ChatService  *ChatService
+	AgentService agents.AgentService
+	BrokerClient broker.BrokerService
 }
 
 func NewModule(logger *slog.Logger) *Module {
@@ -30,30 +26,22 @@ func (m *Module) Name() string {
 	return "chatbot"
 }
 
-func (m *Module) Init(cfg *config.Config, _ *gorm.DB, _ *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, _ *gorm.DB, brokerClient broker.BrokerService) error {
 	m.cfg = cfg
 
-	client, err := ai.NewOpenAIClient(cfg, m.logger)
-	if err != nil {
-		return err
-	}
-	m.aiClient = client
+	m.BrokerClient = brokerClient
+
+	m.AgentService = agents.NewService() // Placeholder for agent service
+
+	m.ChatService = NewService(m.logger, m.AgentService, m.BrokerClient)
 	return nil
 }
 
-func (m *Module) SetWebBuilder(manager webbuilder.SiteManager) error {
-	if manager == nil {
-		return service.ErrWebBuilderMissing
-	}
-	m.webBuilder = manager
-	m.service = service.New(m.aiClient, manager)
-	m.handler = handler.New(m.service)
-	return nil
+// Note: The old RegisterRoutes is removed as the chatbot service now operates over WebSockets,
+// which are handled by the orchestrator's main function.
+
+func (m *Module) RegisterRoutes(group *gin.RouterGroup, authMiddleware ...gin.HandlerFunc) {
+	// The chatbot service now operates over WebSockets,
+	// which are handled by the orchestrator's main function.
+	// This method is here to satisfy the module interface.
 }
-
-func (m *Module) RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.HandlerFunc) {
-	api := router.Group("/api/v1/chatbot", middlewares...)
-	api.POST("/generate", m.handler.GenerateDraft)
-}
-
-

@@ -9,6 +9,6 @@ import (
 
 type Module interface {
 	Name() string
-	Init(cfg *config.Config, db *gorm.DB, broker *broker.Client) error
+	Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error
 	RegisterRoutes(router *gin.RouterGroup, middlewares ...gin.HandlerFunc)
 }

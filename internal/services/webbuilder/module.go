@@ -29,7 +29,7 @@ func (m *Module) Name() string {
 	return "web-builder"
 }
 
-func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error {
 	m.cfg = cfg
 	m.repo = repository.New(db)
 	siteService, err := service.NewSiteService(cfg, m.repo, m.logger)

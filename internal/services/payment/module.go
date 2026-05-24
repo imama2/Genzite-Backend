@@ -32,7 +32,7 @@ func (m *Module) Name() string {
 	return "payment"
 }
 
-func (m *Module) Init(cfg *config.Config, db *gorm.DB, _ *broker.Client) error {
+func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error {
 	m.cfg = cfg
 	m.repo = repository.New(db)
 	client, err := midtrans.New(cfg)
