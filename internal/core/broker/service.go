@@ -8,6 +8,7 @@ import (
 
 // BrokerService defines the interface for a message broker.
 type BrokerService interface {
-	EnqueueBuildJob(ctx context.Context, jobData []byte) error
+	Enqueue(ctx context.Context, queueName string, jobData []byte) error
+	Dequeue(ctx context.Context, queueName string) ([]byte, error)
 	SubscribeToProgress(ctx context.Context, channelName string) *redis.PubSub
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	architect "github.com/imama2/Genzite-Backend/gen/go/agents"
+	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/services/agents"
 )
 
@@ -23,6 +24,7 @@ type Session struct {
 	sendToClient chan<- []byte // To send messages back to the user via websocket
 
 	agentService    agents.AgentService
+	brokerService   broker.BrokerService
 	architectStream architect.Architect_AnalyzePromptClient
 }
 
@@ -47,15 +49,16 @@ const (
 	StateFailed
 )
 
-func NewSession(userID string, logger *slog.Logger, sendChan chan<- []byte, agentService agents.AgentService) *Session {
+func NewSession(userID string, logger *slog.Logger, sendChan chan<- []byte, agentService agents.AgentService, broker broker.BrokerService) *Session {
 	sessionID := uuid.New().String()
 	return &Session{
-		ID:           sessionID,
-		UserID:       userID,
-		logger:       logger.With("sessionID", sessionID, "userID", userID),
-		state:        StateIdle,
-		sendToClient: sendChan,
-		agentService: agentService,
+		ID:            sessionID,
+		UserID:        userID,
+		logger:        logger.With("sessionID", sessionID, "userID", userID),
+		state:         StateIdle,
+		sendToClient:  sendChan,
+		agentService:  agentService,
+		brokerService: broker,
 		context: &ConversationContext{
 			BuildID: uuid.New().String(),
 		},
@@ -227,7 +230,39 @@ func (s *Session) finalizeBlueprint() {
 	s.logger.Info("Blueprint finalized successfully")
 	s.sendMessageToClient("finalize_success", resp)
 
-	// TODO: Next step would be to enqueue the build job.
+	// Enqueue the build job
+	s.enqueueBuildJob(resp.BlueprintJson)
+}
+
+func (s *Session) enqueueBuildJob(blueprintJSON string) {
+	if s.brokerService == nil {
+		s.logger.Error("Broker service is not initialized, cannot enqueue build job")
+		return
+	}
+
+	jobPayload := broker.BuildJob{
+		BuildID:       s.context.BuildID,
+		UserID:        s.UserID,
+		BlueprintJSON: blueprintJSON,
+	}
+
+	payloadBytes, err := json.Marshal(jobPayload)
+	if err != nil {
+		s.logger.Error("Failed to marshal build job payload", "error", err, "buildID", s.context.BuildID)
+		// Optionally, notify the client of this internal error
+		s.sendMessageToClient("enqueue_failed", "internal error: could not create build job")
+		return
+	}
+
+	err = s.brokerService.Enqueue(context.Background(), broker.QueueBuild, payloadBytes)
+	if err != nil {
+		s.logger.Error("Failed to enqueue build job", "error", err, "buildID", s.context.BuildID)
+		s.sendMessageToClient("enqueue_failed", "internal error: could not submit build job")
+		return
+	}
+
+	s.logger.Info("Successfully enqueued build job", "buildID", s.context.BuildID, "queue", broker.QueueBuild)
+	s.sendMessageToClient("build_enqueued", map[string]string{"buildId": s.context.BuildID})
 }
 
 // sendMessageToClient is a helper to marshal and send messages to the WebSocket client.

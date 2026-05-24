@@ -32,7 +32,7 @@ func (s *ChatService) HandleNewConnection(userID string, sendChan chan<- []byte)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	session := NewSession(userID, s.logger, sendChan, s.agentClient)
+	session := NewSession(userID, s.logger, sendChan, s.agentClient, s.brokerClient)
 	s.sessions[session.ID] = session
 	s.logger.Info("New chat session created", "sessionID", session.ID, "userID", userID)
 	return session
