@@ -99,7 +99,7 @@ func Load() (*Config, error) {
 		PaymentEnabled:             getBoolEnv("PAYMENT_ENABLED"),
 		NotificationEnabled:        getBoolEnv("NOTIFICATION_ENABLED"),
 		TemplateEnabled:            getBoolEnv("TEMPLATE_ENABLED"),
-		RedisURL:                   getEnv("REDIS_URL", "redis://localhost:6379"),
+		RedisURL:                   getEnv("REDIS_URL", "localhost:6379"),
 		LogLevel:                   getEnv("LOG_LEVEL", "info"),
 		JWTSecret:                  jwtSecret,
 		JWTIssuer:                  getEnv("JWT_ISSUER", "genzite"),
