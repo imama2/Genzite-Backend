@@ -1,5 +1,7 @@
 FROM golang:1.23-alpine AS build
 
+ENV GOTOOLCHAIN=auto
+
 WORKDIR /src
 
 RUN apk add --no-cache git

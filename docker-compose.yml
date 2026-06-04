@@ -17,13 +17,16 @@ services:
       JWT_SECRET: "change-me"
       IAM_ENABLED: "true"
       MIGRATIONS_ENABLED: "true"
-      WEB_BUILDER_ENABLED: "true"
-      CHATBOT_ENABLED: "true"
-      PAYMENT_ENABLED: "true"
-      NOTIFICATION_ENABLED: "true"
-      TEMPLATE_ENABLED: "true"
+      WEB_BUILDER_ENABLED: "false"
+      CHATBOT_ENABLED: "false"
+      PAYMENT_ENABLED: "false"
+      NOTIFICATION_ENABLED: "false"
+      TEMPLATE_ENABLED: "false"
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       RABBITMQ_QUEUE: "notifications.email"
+      REDIS_URL: "redis:6379"
+      GRPC_ARCHITECT_URL: "python-grpc:50051"
+      MIDTRANS_SERVER_KEY: "dummy-key-not-used"
       MIGRATIONS_PATH: "migrations"
       WEB_BUILDER_STORAGE_PATH: "storage/web-builder"
     depends_on:
@@ -31,6 +34,10 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      python-grpc:
+        condition: service_started
     volumes:
       - web-builder-storage:/app/storage/web-builder
 
@@ -62,6 +69,56 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: genzite-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  python-grpc:
+    build:
+      context: .
+      dockerfile: python/Dockerfile
+    image: genzite-python-grpc:local
+    container_name: genzite-python-grpc
+    ports:
+      - "50051:50051"
+    env_file:
+      - python/.env
+    environment:
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      GRPC_PORT: "50051"
+      LOG_LEVEL: "INFO"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["python", "-m", "grpc_server.server"]
+    restart: unless-stopped
+
+  python-worker:
+    build:
+      context: .
+      dockerfile: python/Dockerfile
+    image: genzite-python-worker:local
+    container_name: genzite-python-worker
+    env_file:
+      - python/.env
+    environment:
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      LOG_LEVEL: "INFO"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["python", "workers/build_worker.py"]
+    restart: unless-stopped
 
 volumes:
   postgres-data:
