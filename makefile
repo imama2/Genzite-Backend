@@ -137,10 +137,12 @@ proto: ## Generate gRPC stubs
 		proto/agents/architect.proto
 
 	@echo "Generating Python gRPC stubs..."
-	if not exist "python\gen" mkdir "python\gen"
-	if not exist "python\gen\py" mkdir "python\gen\py"
-	python -m grpc_tools.protoc --proto_path=proto \
-		--python_out=python/gen/py \
-		--grpc_python_out=python/gen/py \
+	if not exist "python\grpc_server\generated" mkdir "python\grpc_server\generated"
+	python -m grpc_tools.protoc --proto_path=proto/agents \
+		--python_out=python/grpc_server/generated \
+		--grpc_python_out=python/grpc_server/generated \
+		--pyi_out=python/grpc_server/generated \
 		proto/agents/architect.proto
+	python -c "from pathlib import Path; p=Path('python/grpc_server/generated/architect_pb2_grpc.py'); s=p.read_text(); p.write_text(s.replace('import architect_pb2 as architect__pb2', 'from . import architect_pb2 as architect__pb2'))"
+	if not exist "python\grpc_server\generated\__init__.py" type nul > "python\grpc_server\generated\__init__.py"
 	@echo "Done."

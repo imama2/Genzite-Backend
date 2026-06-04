@@ -38,7 +38,7 @@ make proto
 
 This creates:
 - `gen/go/agents/*.pb.go` - Go gRPC stubs
-- `python/gen/py/*.py` - Python gRPC stubs
+- `python/grpc_server/generated/*.py` - Python gRPC stubs
 
 ### 2. Install Dependencies
 
