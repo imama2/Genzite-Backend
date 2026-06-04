@@ -3,9 +3,9 @@ import logging
 import grpc
 from concurrent import futures
 
-from ..config import settings
-from .generated import architect_pb2_grpc
-from .architect_service import ArchitectAgentServicer
+from config import settings
+from grpc_server.generated import architect_pb2_grpc
+from grpc_server.architect_service import ArchitectServicer
 
 logging.basicConfig(level=settings.LOG_LEVEL.upper())
 logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ async def serve():
     """
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
     
-    architect_pb2_grpc.add_ArchitectAgentServicer_to_server(
-        ArchitectAgentServicer(), server
+    architect_pb2_grpc.add_ArchitectServicer_to_server(
+        ArchitectServicer(), server
     )
     
     listen_addr = f"[::]:{settings.GRPC_PORT}"
