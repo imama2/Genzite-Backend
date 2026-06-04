@@ -41,3 +41,8 @@ design/*
 copilot/*
 
 gen/*
+
+python/__pycache__/*
+python/agents/__pycache__/*
+python/grpc_server/__pycache__/*
+python/grpc_server/generated/*
