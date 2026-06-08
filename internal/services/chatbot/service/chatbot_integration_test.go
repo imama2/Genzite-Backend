@@ -9,19 +9,19 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/imama2/Genzite-Backend/internal/services/chatbot/ai"
-	"github.com/imama2/Genzite-Backend/internal/services/chatbot/service"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
+	"github.com/imama2/Genzite-Backend/internal/services/chatbot/models/dto"
+	"github.com/imama2/Genzite-Backend/internal/services/chatbot/service"
 	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models"
 	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
 	"gorm.io/gorm"
 )
 
 type fakeAI struct {
-	config webbuilder.SiteConfig
+	config dto.SiteConfig
 }
 
-func (f *fakeAI) GenerateSiteConfig(_ context.Context, _ ai.BrandingInput) (webbuilder.SiteConfig, error) {
+func (f *fakeAI) GenerateSiteConfig(_ context.Context, _ dto.BrandingInput) (dto.SiteConfig, error) {
 	return f.config, nil
 }
 
@@ -99,7 +99,7 @@ func TestChatbotGeneratesDraftSite(t *testing.T) {
 		t.Fatalf("new site service: %v", err)
 	}
 
-	aiClient := &fakeAI{config: webbuilder.SiteConfig{
+	aiClient := &fakeAI{config: dto.SiteConfig{
 		Title:    "Jane Doe",
 		Name:     "Jane Doe",
 		Headline: "Product designer",
@@ -107,7 +107,7 @@ func TestChatbotGeneratesDraftSite(t *testing.T) {
 	}}
 
 	chatService := service.New(aiClient, siteService)
-	configResult, siteID, slug, status, err := chatService.GenerateDraft(ctx, 1, service.DraftInput{
+	configResult, siteID, slug, status, err := chatService.GenerateDraft(ctx, 1, dto.DraftInput{
 		Slug:   "jane-doe",
 		Prompt: "Minimal, friendly, modern portfolio.",
 		Name:   "Jane Doe",
@@ -132,5 +132,3 @@ func TestChatbotGeneratesDraftSite(t *testing.T) {
 		t.Fatalf("stat generated html: %v", err)
 	}
 }
-
-

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/imama2/Genzite-Backend/internal/core/config"
-	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	"github.com/imama2/Genzite-Backend/internal/services/chatbot/models/dto"
 )
 
 type OpenAIClient struct {
@@ -75,16 +75,9 @@ type chatResponse struct {
 	} `json:"error,omitempty"`
 }
 
-type BrandingInput struct {
-	Prompt    string
-	Name      string
-	Headline  string
-	Bio       string
-	AvatarURL string
-	Links     []webbuilder.Link
-}
+type BrandingInput = dto.BrandingInput
 
-func (c *OpenAIClient) GenerateSiteConfig(ctx context.Context, input BrandingInput) (webbuilder.SiteConfig, error) {
+func (c *OpenAIClient) GenerateSiteConfig(ctx context.Context, input dto.BrandingInput) (dto.SiteConfig, error) {
 	systemPrompt := `You are a branding assistant. Produce a JSON object for a personal website.
 Return only JSON with keys: "title", "name", "headline", "bio", "avatar_url", "links".
 Each link must be an object with "label" and "url". Use empty arrays if needed.`
@@ -103,53 +96,53 @@ Each link must be an object with "label" and "url". Use empty arrays if needed.`
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("marshal request: %w", err)
+		return dto.SiteConfig{}, fmt.Errorf("marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("build request: %w", err)
+		return dto.SiteConfig{}, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("openai request failed: %w", err)
+		return dto.SiteConfig{}, fmt.Errorf("openai request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("read response: %w", err)
+		return dto.SiteConfig{}, fmt.Errorf("read response: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return webbuilder.SiteConfig{}, fmt.Errorf("openai error: %s", strings.TrimSpace(string(responseBody)))
+		return dto.SiteConfig{}, fmt.Errorf("openai error: %s", strings.TrimSpace(string(responseBody)))
 	}
 
 	var parsed chatResponse
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("parse response: %w", err)
+		return dto.SiteConfig{}, fmt.Errorf("parse response: %w", err)
 	}
 
 	if parsed.Error != nil {
-		return webbuilder.SiteConfig{}, fmt.Errorf("openai error: %s", parsed.Error.Message)
+		return dto.SiteConfig{}, fmt.Errorf("openai error: %s", parsed.Error.Message)
 	}
 
 	if len(parsed.Choices) == 0 {
-		return webbuilder.SiteConfig{}, errors.New("openai response empty")
+		return dto.SiteConfig{}, errors.New("openai response empty")
 	}
 
 	content := strings.TrimSpace(parsed.Choices[0].Message.Content)
 	if content == "" {
-		return webbuilder.SiteConfig{}, errors.New("openai response empty")
+		return dto.SiteConfig{}, errors.New("openai response empty")
 	}
 
-	var config webbuilder.SiteConfig
+	var config dto.SiteConfig
 	if err := json.Unmarshal([]byte(content), &config); err != nil {
 		c.logger.Error("failed to parse openai json", "error", err, "content", content)
-		return webbuilder.SiteConfig{}, errors.New("invalid openai response")
+		return dto.SiteConfig{}, errors.New("invalid openai response")
 	}
 
 	return config, nil
@@ -188,4 +181,3 @@ func buildUserPrompt(input BrandingInput) string {
 
 	return builder.String()
 }
-

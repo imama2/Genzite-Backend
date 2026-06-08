@@ -16,4 +16,5 @@ var (
 	ErrPaymentNotFound     = errors.New("payment not found")
 	ErrInvalidSignature    = errors.New("invalid signature")
 	ErrWebBuilderMissing   = errors.New("web-builder service not configured")
+	ErrAIUnavailable       = errors.New("ai client not configured")
 )
