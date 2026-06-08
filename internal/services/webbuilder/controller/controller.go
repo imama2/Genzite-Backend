@@ -10,30 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
 	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models/dto"
-	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
 	errorUtils "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
-
-type SiteController struct {
-	service service.SiteManager
-}
-
-func New(service service.SiteManager) *SiteController {
-	return &SiteController{service: service}
-}
-
-type createSiteRequest struct {
-	Slug   string         `json:"slug" binding:"required"`
-	Config dto.SiteConfig `json:"config" binding:"required"`
-}
-
-type siteResponse struct {
-	ID          uint   `json:"id"`
-	Slug        string `json:"slug"`
-	Status      string `json:"status"`
-	PublishedAt string `json:"published_at,omitempty"`
-}
 
 func (h *SiteController) CreateSite(c *gin.Context) {
 	userID, ok := getUserID(c)
@@ -42,7 +21,7 @@ func (h *SiteController) CreateSite(c *gin.Context) {
 		return
 	}
 
-	var req createSiteRequest
+	var req dto.CreateSiteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		responses.BadRequest(c, "invalid request")
 		return
@@ -64,7 +43,7 @@ func (h *SiteController) CreateSite(c *gin.Context) {
 		return
 	}
 
-	responses.CreatedResponse(c, "site created", siteResponse{
+	responses.CreatedResponse(c, "site created", dto.SiteResponse{
 		ID:     site.ID,
 		Slug:   site.Slug,
 		Status: site.Status,
@@ -102,7 +81,7 @@ func (h *SiteController) PublishSite(c *gin.Context) {
 		publishedAt = site.PublishedAt.UTC().Format(time.RFC3339)
 	}
 
-	responses.Ok(c, "site published", siteResponse{
+	responses.Ok(c, "site published", dto.SiteResponse{
 		ID:          site.ID,
 		Slug:        site.Slug,
 		Status:      site.Status,
