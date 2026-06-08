@@ -17,7 +17,7 @@ type Module struct {
 	logger     *slog.Logger
 	cfg        *config.Config
 	repo       repository.Repository
-	service    *service.SiteService
+	service    service.SiteManager
 	controller *controller.SiteController
 }
 

@@ -9,21 +9,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/imama2/Genzite-Backend/internal/core/middleware"
+	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models/dto"
 	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	errorUtils "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"github.com/imama2/Genzite-Backend/internal/utils/responses"
 )
 
 type SiteController struct {
-	service *service.SiteService
+	service service.SiteManager
 }
 
-func New(service *service.SiteService) *SiteController {
+func New(service service.SiteManager) *SiteController {
 	return &SiteController{service: service}
 }
 
 type createSiteRequest struct {
-	Slug   string             `json:"slug" binding:"required"`
-	Config service.SiteConfig `json:"config" binding:"required"`
+	Slug   string         `json:"slug" binding:"required"`
+	Config dto.SiteConfig `json:"config" binding:"required"`
 }
 
 type siteResponse struct {
@@ -46,15 +48,15 @@ func (h *SiteController) CreateSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.service.CreateSite(c.Request.Context(), userID, service.CreateSiteInput{
+	site, err := h.service.CreateSite(c.Request.Context(), userID, dto.CreateSiteInput{
 		Slug:   req.Slug,
 		Config: req.Config,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrSlugTaken):
+		case errors.Is(err, errorUtils.ErrSlugTaken):
 			responses.ConflictResponse(c, "slug already taken")
-		case errors.Is(err, service.ErrInvalidInput):
+		case errors.Is(err, errorUtils.ErrInvalidInput):
 			responses.BadRequest(c, "invalid input")
 		default:
 			responses.ServerError(c, "failed to create site")
@@ -85,9 +87,9 @@ func (h *SiteController) PublishSite(c *gin.Context) {
 	site, err := h.service.PublishSite(c.Request.Context(), userID, siteID)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrUnauthorized):
+		case errors.Is(err, errorUtils.ErrUnauthorized):
 			responses.ForbiddenResponse(c, "forbidden")
-		case errors.Is(err, service.ErrSiteNotFound):
+		case errors.Is(err, errorUtils.ErrSiteNotFound):
 			responses.NotFound(c, "site not found")
 		default:
 			responses.ServerError(c, "failed to publish site")

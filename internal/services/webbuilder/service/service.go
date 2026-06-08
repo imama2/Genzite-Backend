@@ -5,92 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models"
-	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/repository"
+	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models/dto"
+	"github.com/imama2/Genzite-Backend/internal/services/webbuilder/models/entities"
+	errorUtils "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"gorm.io/gorm"
 )
 
-const (
-	statusDraft     = "draft"
-	statusPublished = "published"
-)
-
-var (
-	ErrInvalidInput = errors.New("invalid input")
-	ErrSlugTaken    = errors.New("slug already taken")
-	ErrSiteNotFound = errors.New("site not found")
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrRenderFailed = errors.New("render failed")
-	ErrNotPublished = errors.New("site not published")
-)
-
-type SiteManager interface {
-	CreateSite(ctx context.Context, userID uint, input CreateSiteInput) (*models.Site, error)
-	PublishSite(ctx context.Context, userID uint, siteID uint) (*models.Site, error)
-	GetSiteForUser(ctx context.Context, userID uint, siteID uint) (*models.Site, error)
-}
-
-type SiteService struct {
-	cfg      *config.Config
-	repo     repository.Repository
-	logger   *slog.Logger
-	template *template.Template
-}
-
-type CreateSiteInput struct {
-	Slug   string
-	Config SiteConfig
-}
-
-type SiteConfig struct {
-	Title     string `json:"title"`
-	Name      string `json:"name"`
-	Headline  string `json:"headline"`
-	Bio       string `json:"bio"`
-	AvatarURL string `json:"avatar_url"`
-	Links     []Link `json:"links"`
-}
-
-type Link struct {
-	Label string `json:"label"`
-	URL   string `json:"url"`
-}
-
-type templateData struct {
-	Title     string
-	Name      string
-	Headline  string
-	Bio       string
-	AvatarURL string
-	Links     []Link
-}
-
-func NewSiteService(cfg *config.Config, repo repository.Repository, logger *slog.Logger) (*SiteService, error) {
-	tmpl, err := template.New("web-builder").Parse(defaultTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("parse template: %w", err)
-	}
-
-	return &SiteService{
-		cfg:      cfg,
-		repo:     repo,
-		logger:   logger,
-		template: tmpl,
-	}, nil
-}
-
-func (s *SiteService) CreateSite(ctx context.Context, userID uint, input CreateSiteInput) (*models.Site, error) {
+func (s *SiteService) CreateSite(ctx context.Context, userID uint, input dto.CreateSiteInput) (*models.Site, error) {
 	slug := sanitizeSlug(input.Slug)
 	if slug == "" || strings.TrimSpace(input.Config.Name) == "" {
-		return nil, ErrInvalidInput
+		return nil, errorUtils.ErrInvalidInput
 	}
 
 	site, err := s.repo.GetSiteBySlug(ctx, slug)
@@ -99,17 +29,17 @@ func (s *SiteService) CreateSite(ctx context.Context, userID uint, input CreateS
 	}
 
 	if site != nil && site.UserID != userID {
-		return nil, ErrSlugTaken
+		return nil, errorUtils.ErrSlugTaken
 	}
 
 	configJSON, err := json.Marshal(input.Config)
 	if err != nil {
-		return nil, ErrInvalidInput
+		return nil, errorUtils.ErrInvalidInput
 	}
 
 	outputPath := s.outputPath(slug)
 	if outputPath == "" {
-		return nil, ErrInvalidInput
+		return nil, errorUtils.ErrInvalidInput
 	}
 
 	if err := s.renderToFile(outputPath, input.Config); err != nil {
@@ -122,7 +52,7 @@ func (s *SiteService) CreateSite(ctx context.Context, userID uint, input CreateS
 			Slug:       slug,
 			Title:      input.Config.Title,
 			ConfigJSON: string(configJSON),
-			Status:     statusDraft,
+			Status:     entities.StatusDraft,
 			OutputPath: outputPath,
 		}
 		if err := s.repo.CreateSite(ctx, site); err != nil {
@@ -131,7 +61,7 @@ func (s *SiteService) CreateSite(ctx context.Context, userID uint, input CreateS
 	} else {
 		site.Title = input.Config.Title
 		site.ConfigJSON = string(configJSON)
-		site.Status = statusDraft
+		site.Status = entities.StatusDraft
 		site.PublishedAt = nil
 		site.OutputPath = outputPath
 		if err := s.repo.UpdateSite(ctx, site); err != nil {
@@ -146,18 +76,18 @@ func (s *SiteService) PublishSite(ctx context.Context, userID uint, siteID uint)
 	site, err := s.repo.GetSiteByID(ctx, siteID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrSiteNotFound
+			return nil, errorUtils.ErrSiteNotFound
 		}
 		return nil, err
 	}
 
 	if site.UserID != userID {
-		return nil, ErrUnauthorized
+		return nil, errorUtils.ErrUnauthorized
 	}
 
 	config, err := s.decodeConfig(site.ConfigJSON)
 	if err != nil {
-		return nil, ErrInvalidInput
+		return nil, errorUtils.ErrInvalidInput
 	}
 
 	if err := s.renderToFile(site.OutputPath, config); err != nil {
@@ -165,7 +95,7 @@ func (s *SiteService) PublishSite(ctx context.Context, userID uint, siteID uint)
 	}
 
 	now := time.Now()
-	site.Status = statusPublished
+	site.Status = entities.StatusPublished
 	site.PublishedAt = &now
 
 	if err := s.repo.UpdateSite(ctx, site); err != nil {
@@ -179,13 +109,13 @@ func (s *SiteService) GetSiteForUser(ctx context.Context, userID uint, siteID ui
 	site, err := s.repo.GetSiteByID(ctx, siteID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrSiteNotFound
+			return nil, errorUtils.ErrSiteNotFound
 		}
 		return nil, err
 	}
 
 	if site.UserID != userID {
-		return nil, ErrUnauthorized
+		return nil, errorUtils.ErrUnauthorized
 	}
 
 	return site, nil
@@ -195,16 +125,16 @@ func (s *SiteService) GetPublishedSiteBySlug(ctx context.Context, slug string) (
 	site, err := s.repo.GetPublishedSiteBySlug(ctx, sanitizeSlug(slug))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrSiteNotFound
+			return nil, errorUtils.ErrSiteNotFound
 		}
 		return nil, err
 	}
 	return site, nil
 }
 
-func (s *SiteService) renderToFile(outputPath string, config SiteConfig) error {
+func (s *SiteService) renderToFile(outputPath string, config dto.SiteConfig) error {
 	if outputPath == "" {
-		return ErrInvalidInput
+		return errorUtils.ErrInvalidInput
 	}
 
 	dir := filepath.Dir(outputPath)
@@ -218,7 +148,7 @@ func (s *SiteService) renderToFile(outputPath string, config SiteConfig) error {
 	}
 	defer file.Close()
 
-	data := templateData{
+	data := entities.TemplateData{
 		Title:     config.Title,
 		Name:      config.Name,
 		Headline:  config.Headline,
@@ -228,16 +158,16 @@ func (s *SiteService) renderToFile(outputPath string, config SiteConfig) error {
 	}
 
 	if err := s.template.Execute(file, data); err != nil {
-		return ErrRenderFailed
+		return errorUtils.ErrRenderFailed
 	}
 
 	return nil
 }
 
-func (s *SiteService) decodeConfig(raw string) (SiteConfig, error) {
-	var config SiteConfig
+func (s *SiteService) decodeConfig(raw string) (dto.SiteConfig, error) {
+	var config dto.SiteConfig
 	if err := json.Unmarshal([]byte(raw), &config); err != nil {
-		return SiteConfig{}, err
+		return dto.SiteConfig{}, err
 	}
 	return config, nil
 }
@@ -283,39 +213,3 @@ func sanitizeSlug(value string) string {
 	result := strings.Trim(builder.String(), "-")
 	return result
 }
-
-const defaultTemplate = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>{{ if .Title }}{{ .Title }}{{ else }}{{ .Name }}{{ end }}</title>
-    <style>
-      body { font-family: Arial, sans-serif; max-width: 720px; margin: 48px auto; padding: 0 16px; }
-      header { display: flex; align-items: center; gap: 16px; }
-      img.avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
-      ul.links { list-style: none; padding: 0; }
-      ul.links li { margin: 8px 0; }
-    </style>
-  </head>
-  <body>
-    <header>
-      {{ if .AvatarURL }}<img class="avatar" src="{{ .AvatarURL }}" alt="{{ .Name }}"/>{{ end }}
-      <div>
-        <h1>{{ .Name }}</h1>
-        {{ if .Headline }}<p>{{ .Headline }}</p>{{ end }}
-      </div>
-    </header>
-    {{ if .Bio }}<p>{{ .Bio }}</p>{{ end }}
-    {{ if .Links }}
-      <h2>Links</h2>
-      <ul class="links">
-        {{ range .Links }}
-          <li><a href="{{ .URL }}">{{ .Label }}</a></li>
-        {{ end }}
-      </ul>
-    {{ end }}
-  </body>
-</html>
-`
-
