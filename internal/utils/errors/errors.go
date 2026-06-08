@@ -13,4 +13,7 @@ var (
 	ErrUnauthorized        = errors.New("unauthorized")
 	ErrRenderFailed        = errors.New("render failed")
 	ErrNotPublished        = errors.New("site not published")
+	ErrPaymentNotFound     = errors.New("payment not found")
+	ErrInvalidSignature    = errors.New("invalid signature")
+	ErrWebBuilderMissing   = errors.New("web-builder service not configured")
 )

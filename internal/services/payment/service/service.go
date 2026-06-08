@@ -7,72 +7,23 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/imama2/Genzite-Backend/internal/core/config"
-	"github.com/imama2/Genzite-Backend/internal/services/payment/midtrans"
+	"github.com/imama2/Genzite-Backend/internal/services/payment/gateway/midtrans"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/models"
-	"github.com/imama2/Genzite-Backend/internal/services/payment/repository"
-	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	"github.com/imama2/Genzite-Backend/internal/services/payment/models/dto"
+	"github.com/imama2/Genzite-Backend/internal/services/payment/models/entities"
+	errorUtils "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"gorm.io/gorm"
-)
-
-const (
-	providerMidtrans = "midtrans"
-	statusPending    = "pending"
-	statusPaid       = "paid"
-	statusFailed     = "failed"
-	statusCanceled   = "canceled"
-	statusExpired    = "expired"
 )
 
 const paymentAmountIDR = int64(99000)
 
-var (
-	ErrInvalidInput      = errors.New("invalid input")
-	ErrPaymentNotFound   = errors.New("payment not found")
-	ErrInvalidSignature  = errors.New("invalid signature")
-	ErrWebBuilderMissing = errors.New("web-builder service not configured")
-)
-
-type PaymentService struct {
-	cfg        *config.Config
-	repo       repository.Repository
-	client     *midtrans.Client
-	webBuilder webbuilder.SiteManager
-	logger     *slog.Logger
-}
-
-type CreateResult struct {
-	OrderID     string
-	RedirectURL string
-}
-
-type WebhookPayload struct {
-	OrderID           string `json:"order_id"`
-	StatusCode        string `json:"status_code"`
-	GrossAmount       string `json:"gross_amount"`
-	SignatureKey      string `json:"signature_key"`
-	TransactionStatus string `json:"transaction_status"`
-	FraudStatus       string `json:"fraud_status"`
-}
-
-func New(cfg *config.Config, repo repository.Repository, client *midtrans.Client, webBuilder webbuilder.SiteManager, logger *slog.Logger) *PaymentService {
-	return &PaymentService{
-		cfg:        cfg,
-		repo:       repo,
-		client:     client,
-		webBuilder: webBuilder,
-		logger:     logger,
-	}
-}
-
-func (s *PaymentService) CreateTransaction(ctx context.Context, userID uint, siteID uint) (*CreateResult, error) {
+func (s *PaymentService) CreateTransaction(ctx context.Context, userID uint, siteID uint) (*dto.CreateTransactionResult, error) {
 	if s.webBuilder == nil {
-		return nil, ErrWebBuilderMissing
+		return nil, errorUtils.ErrWebBuilderMissing
 	}
 
 	_, err := s.webBuilder.GetSiteForUser(ctx, userID, siteID)
@@ -106,8 +57,8 @@ func (s *PaymentService) CreateTransaction(ctx context.Context, userID uint, sit
 		SiteID:      siteID,
 		OrderID:     orderID,
 		Amount:      paymentAmountIDR,
-		Status:      statusPending,
-		Provider:    providerMidtrans,
+		Status:      entities.StatusPending,
+		Provider:    entities.ProviderMidtrans,
 		RedirectURL: response.RedirectURL,
 		SnapToken:   response.Token,
 	}
@@ -116,25 +67,25 @@ func (s *PaymentService) CreateTransaction(ctx context.Context, userID uint, sit
 		return nil, err
 	}
 
-	return &CreateResult{
+	return &dto.CreateTransactionResult{
 		OrderID:     orderID,
 		RedirectURL: response.RedirectURL,
 	}, nil
 }
 
-func (s *PaymentService) HandleWebhook(ctx context.Context, payload WebhookPayload) (string, error) {
+func (s *PaymentService) HandleWebhook(ctx context.Context, payload dto.WebhookPayload) (string, error) {
 	if payload.OrderID == "" || payload.SignatureKey == "" || payload.StatusCode == "" || payload.GrossAmount == "" {
-		return "", ErrInvalidInput
+		return "", errorUtils.ErrInvalidInput
 	}
 
 	if !s.verifySignature(payload) {
-		return "", ErrInvalidSignature
+		return "", errorUtils.ErrInvalidSignature
 	}
 
 	payment, err := s.repo.GetByOrderID(ctx, payload.OrderID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", ErrPaymentNotFound
+			return "", errorUtils.ErrPaymentNotFound
 		}
 		return "", err
 	}
@@ -142,15 +93,15 @@ func (s *PaymentService) HandleWebhook(ctx context.Context, payload WebhookPaylo
 	newStatus := mapStatus(payload.TransactionStatus, payload.FraudStatus)
 	updated := false
 
-	if newStatus == statusPaid {
-		if payment.Status != statusPaid {
+	if newStatus == entities.StatusPaid {
+		if payment.Status != entities.StatusPaid {
 			if s.webBuilder == nil {
-				return "", ErrWebBuilderMissing
+				return "", errorUtils.ErrWebBuilderMissing
 			}
 			if _, err := s.webBuilder.PublishSite(ctx, payment.UserID, payment.SiteID); err != nil {
 				return "", err
 			}
-			payment.Status = statusPaid
+			payment.Status = entities.StatusPaid
 			updated = true
 		}
 	} else if newStatus != "" && payment.Status != newStatus {
@@ -175,26 +126,26 @@ func (s *PaymentService) HandleWebhook(ctx context.Context, payload WebhookPaylo
 func mapStatus(transactionStatus, fraudStatus string) string {
 	switch transactionStatus {
 	case "settlement":
-		return statusPaid
+		return entities.StatusPaid
 	case "capture":
 		if strings.EqualFold(fraudStatus, "accept") || fraudStatus == "" {
-			return statusPaid
+			return entities.StatusPaid
 		}
-		return statusPending
+		return entities.StatusPending
 	case "pending":
-		return statusPending
+		return entities.StatusPending
 	case "deny":
-		return statusFailed
+		return entities.StatusFailed
 	case "expire":
-		return statusExpired
+		return entities.StatusExpired
 	case "cancel":
-		return statusCanceled
+		return entities.StatusCanceled
 	default:
 		return ""
 	}
 }
 
-func (s *PaymentService) verifySignature(payload WebhookPayload) bool {
+func (s *PaymentService) verifySignature(payload dto.WebhookPayload) bool {
 	raw := payload.OrderID + payload.StatusCode + payload.GrossAmount + s.cfg.MidtransServerKey
 	hash := sha512.Sum512([]byte(raw))
 	expected := hex.EncodeToString(hash[:])
@@ -212,7 +163,7 @@ func buildOrderID(userID uint, siteID uint) string {
 func parseAmount(value string) (int64, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return 0, ErrInvalidInput
+		return 0, errorUtils.ErrInvalidInput
 	}
 	if strings.Contains(trimmed, ".") {
 		parts := strings.Split(trimmed, ".")
@@ -220,5 +171,3 @@ func parseAmount(value string) (int64, error) {
 	}
 	return strconv.ParseInt(trimmed, 10, 64)
 }
-
-

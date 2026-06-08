@@ -7,10 +7,11 @@ import (
 	"github.com/imama2/Genzite-Backend/internal/core/broker"
 	"github.com/imama2/Genzite-Backend/internal/core/config"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/controller"
-	"github.com/imama2/Genzite-Backend/internal/services/payment/midtrans"
+	"github.com/imama2/Genzite-Backend/internal/services/payment/gateway/midtrans"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/repository"
 	"github.com/imama2/Genzite-Backend/internal/services/payment/service"
 	webbuilder "github.com/imama2/Genzite-Backend/internal/services/webbuilder/service"
+	errorUtils "github.com/imama2/Genzite-Backend/internal/utils/errors"
 	"gorm.io/gorm"
 )
 
@@ -45,7 +46,7 @@ func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerServi
 
 func (m *Module) SetWebBuilder(manager webbuilder.SiteManager) error {
 	if manager == nil {
-		return service.ErrWebBuilderMissing
+		return errorUtils.ErrWebBuilderMissing
 	}
 	m.webBuilder = manager
 	m.service = service.New(m.cfg, m.repo, m.client, manager, m.logger)
