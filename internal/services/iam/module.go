@@ -13,7 +13,7 @@ type Module struct {
 	logger     *slog.Logger
 	cfg        *config.Config
 	repo       repository.Repository
-	service    *authentication.Service
+	service    authentication.AuthServiceInterface
 	controller *controller.AuthController
 }
 

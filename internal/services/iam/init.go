@@ -12,7 +12,7 @@ import (
 func (m *Module) Init(cfg *config.Config, db *gorm.DB, broker broker.BrokerService) error {
 	m.cfg = cfg
 	m.repo = repository.New(db)
-	m.service = authentication.New(cfg, m.repo, m.logger).(*authentication.Service)
+	m.service = authentication.New(cfg, m.repo, m.logger)
 	m.controller = controller.NewAuthController(cfg, m.service)
 	return nil
 }

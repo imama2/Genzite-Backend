@@ -15,10 +15,10 @@ import (
 
 type AuthController struct {
 	cfg     *config.Config
-	service *authentication.Service
+	service authentication.AuthServiceInterface
 }
 
-func NewAuthController(cfg *config.Config, service *authentication.Service) *AuthController {
+func NewAuthController(cfg *config.Config, service authentication.AuthServiceInterface) *AuthController {
 	return &AuthController{
 		cfg:     cfg,
 		service: service,
